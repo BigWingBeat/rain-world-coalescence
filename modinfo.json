@@ -1,0 +1,11 @@
+{
+    "id": "yourname.yourmodname",
+    "name": "Your Mod Name",
+    "version": "0.1.0",
+    "authors": "Your Name",
+    "description": "This is a Rain World mod template",
+    "requirements": [],
+    "requirements_names": [],
+    "tags": [],
+    "checksum_override_version": false
+}

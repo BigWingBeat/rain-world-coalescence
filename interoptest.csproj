@@ -5,9 +5,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>yourname.yourmodname</AssemblyName> <!-- Plugin GUID -->
-    <Product>Your Mod Name</Product> <!-- Plugin Name -->
-    <ModFolderName>yourmodname</ModFolderName>
+    <AssemblyName>pixelstorm.interoptest</AssemblyName> <!-- Plugin GUID -->
+    <Product>InteropTest</Product> <!-- Plugin Name -->
+    <ModFolderName>interoptest</ModFolderName>
     <Version>0.1.0</Version>
   </PropertyGroup>
 

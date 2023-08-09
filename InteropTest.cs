@@ -1,9 +1,9 @@
 ﻿using BepInEx;
 
-namespace yourmodname
+namespace interoptest
 {
     [BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
-    public class YourModName : BaseUnityPlugin
+    public class InteropTestMain : BaseUnityPlugin
     {
         public const string PLUGIN_GUID = MyPluginInfo.PLUGIN_GUID;
         public const string PLUGIN_NAME = MyPluginInfo.PLUGIN_NAME;

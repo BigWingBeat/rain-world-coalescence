@@ -1,3 +1,3 @@
-# Interop Test
+# Multiplayer MVP
 
-C# and Rust interop in a mod!
+This mod is an MVP (Minimum Viable Product) to demonstrate 'real' (Not via Parsec etc.) online multiplayer for Rain World.

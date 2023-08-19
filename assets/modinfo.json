@@ -1,6 +1,6 @@
 {
-    "id": "pixelstorm.multiplayer_mvp",
-    "name": "Multiplayer MVP",
+    "id": "pixelstorm.multiplayer_mvp.client",
+    "name": "Multiplayer MVP Client",
     "version": "0.1.0",
     "authors": "Pixelstorm",
     "description": "MVP for Rain World multiplayer in the Sandbox and Competitive arena modes",

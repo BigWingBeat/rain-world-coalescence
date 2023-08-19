@@ -1,0 +1,58 @@
+<Project DefaultTargets="BuildModFolder"> <!-- DefaultTargets is ran by `dotnet build` -->
+
+  <PropertyGroup>
+    <!-- If no Configuration is specified, default to Debug -->
+    <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>
+    <!-- Translate from MSBuild Configurations to Rust Profiles -->
+    <NativeBuildProfile Condition="'$(Configuration)'=='Debug'">dev</NativeBuildProfile>
+    <NativeBuildProfile Condition="'$(Configuration)'=='Release'">release</NativeBuildProfile>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ModFolderName>multiplayer_mvp_client</ModFolderName>
+    <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
+    <NativeAssemblyName>multiplayer_mvp_native</NativeAssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ModProjectFiles Include="MultiplayerMvpClient/MultiplayerMvpClient.csproj" />
+    <ModAssetFiles Include="assets/**/*.*" />
+    <ModNativeFiles Include="rust/target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
+  </ItemGroup>
+
+  <Target Name="Restore"> <!-- Restore is ran by `dotnet restore` -->
+    <MSBuild Projects="@(ModProjectFiles)" Targets="Restore" />
+  </Target>
+
+  <Target Name="Clean" DependsOnTargets="CleanModFolder;CleanRust;CleanCSharp" /> <!-- Clean is ran by `dotnet clean` -->
+
+  <Target Name="BuildCSharp">
+    <MSBuild Projects="@(ModProjectFiles)" Targets="Build">
+      <Output TaskParameter="TargetOutputs" ItemName="ModPluginFiles" />
+    </MSBuild>
+  </Target>
+
+  <Target Name="CleanCSharp">
+    <MSBuild Projects="@(ModProjectFiles)" Targets="Clean" />
+  </Target>
+
+  <Target Name="BuildRust">
+    <Exec Command="cross clippy --profile $(NativeBuildProfile) --target $(NativeTargetTriple) -- -W clippy::all" WorkingDirectory="rust" />
+    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" WorkingDirectory="rust" />
+  </Target>
+
+  <Target Name="CleanRust">
+    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" WorkingDirectory="rust" />
+  </Target>
+
+  <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">
+    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="build/$(ModFolderName)/%(RecursiveDir)" />
+    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="build/$(ModFolderName)/plugins" />
+    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="build/$(ModFolderName)/native" />
+  </Target>
+
+  <Target Name="CleanModFolder">
+    <RemoveDir Directories="build" />
+  </Target>
+
+</Project>

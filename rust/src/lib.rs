@@ -7,7 +7,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool},
 };
 
-pub struct AppContainer {
+struct AppContainer {
     pub app: App,
     pub app_exit_event_reader: ManualEventReader<AppExit>,
 }
@@ -27,17 +27,13 @@ pub struct MovementDelta {
     y: f32,
 }
 
-#[derive(Resource)]
-pub struct MovementCallback(extern "C" fn(f32, f32));
-
 #[no_mangle]
-pub extern "C" fn init_app(movement_callback: extern "C" fn(f32, f32)) {
+pub extern "C" fn init_app() {
     println!("App init");
 
     App::new()
         .add_plugins(MinimalPlugins.build().disable::<ScheduleRunnerPlugin>())
         .insert_resource(MovementDelta::default())
-        .insert_resource(MovementCallback(movement_callback))
         .add_systems(Update, do_movement)
         .set_runner(move |mut app: App| {
             while !app.ready() {
@@ -84,27 +80,20 @@ pub extern "C" fn destroy_app() {
     *APP.lock().unwrap() = None;
 }
 
-pub fn do_movement(
-    callback: ResMut<MovementCallback>,
-    mut delta: ResMut<MovementDelta>,
-    time: Res<Time>,
-) {
-    let diff_x = time.elapsed_seconds().sin();
-    let diff_y = time.elapsed_seconds().cos();
-    println!("Bevy doing movement: ({diff_x}, {diff_y})");
-    delta.x = diff_x;
-    delta.y = diff_y;
-    callback.0(diff_x, diff_y);
+fn do_movement(mut delta: ResMut<MovementDelta>, time: Res<Time>) {
+    delta.x = time.elapsed_seconds().sin();
+    delta.y = time.elapsed_seconds().cos();
 }
 
-// #[no_mangle]
-// pub extern "C" fn query_movement_delta() -> MovementDelta {
-//     if let Some(ref mut container) = *APP.lock().unwrap() {
-//         *container.app.world.resource()
-//     } else {
-//         panic!("Cannot query when the app does not exist");
-//     }
-// }
+#[no_mangle]
+pub extern "C" fn query_movement_delta() -> MovementDelta {
+    APP.lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|container| container.app.world.get_resource())
+        .copied()
+        .unwrap_or_default()
+}
 
 #[no_mangle]
 pub extern "C" fn destroy_static_taskpools() {

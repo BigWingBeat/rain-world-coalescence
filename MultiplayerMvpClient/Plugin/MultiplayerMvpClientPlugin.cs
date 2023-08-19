@@ -25,14 +25,14 @@ namespace MultiplayerMvpClient.Plugin
 			Logger ??= base.Logger;
 		}
 
-#pragma warning disable IDE0051 // This type is a monobehaviour, so the Awake method gets called by Unity
-		private static void Awake()
+#pragma warning disable IDE0051, CA1822 // Unity uses reflection to call Awake, for this to work it must not be static
+		private void Awake()
 		{
 			MultiplayerLobby.SetupHooks();
 
 			Application.quitting += DestroyStaticTaskPools;
 		}
-#pragma warning restore IDE0051
+#pragma warning restore IDE0051, CA1822
 
 		private static void DestroyStaticTaskPools()
 		{

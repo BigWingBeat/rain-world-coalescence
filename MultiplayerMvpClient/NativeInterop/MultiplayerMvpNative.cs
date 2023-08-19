@@ -24,10 +24,7 @@ namespace MultiplayerMvpClient.NativeInterop
 #pragma warning restore CS8618
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void MovementCallback(float x_diff, float y_diff);
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void InitApp(MovementCallback callback);
+		public delegate void InitApp();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate bool UpdateApp();
@@ -37,6 +34,9 @@ namespace MultiplayerMvpClient.NativeInterop
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void DestroyStaticTaskPools();
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate MovementDelta QueryMovementDelta();
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly InitApp init_app;
@@ -49,6 +49,21 @@ namespace MultiplayerMvpClient.NativeInterop
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly DestroyStaticTaskPools destroy_static_taskpools;
+
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly QueryMovementDelta query_movement_delta;
+	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct MovementDelta
+	{
+		public float x;
+		public float y;
+
+		public override string ToString()
+		{
+			return $"MovementDelta({x}, {y})";
+		}
 	}
 }
 

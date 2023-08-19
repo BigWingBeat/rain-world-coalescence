@@ -114,7 +114,15 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			bool exitRequested = MultiplayerMvpNative.update_app();
 			if (exitRequested)
 			{
+				MultiplayerMvpClientPlugin.Logger.LogInfo("Native app requested exit");
 				MultiplayerMvpNative.destroy_app();
+			}
+			else
+			{
+				MovementDelta delta = MultiplayerMvpNative.query_movement_delta();
+				MultiplayerMvpClientPlugin.Logger.LogInfo($"Queried delta of: {delta}");
+				NativeDot.x += delta.x;
+				NativeDot.y += delta.y;
 			}
 
 			base.RawUpdate(dt);
@@ -135,13 +143,6 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			}
 		}
 
-		private void DoMovement(float x_diff, float y_diff)
-		{
-			NativeDot.x += x_diff;
-			NativeDot.y += y_diff;
-			MultiplayerMvpClientPlugin.Logger.LogInfo($"C# callback with {x_diff}, {y_diff}");
-		}
-
 		private void OnExit()
 		{
 			if (!exiting)
@@ -160,7 +161,7 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			{
 				case CONNECT_BUTTON_SIGNAL:
 					MultiplayerMvpClientPlugin.Logger.LogInfo($"Connecting");
-					MultiplayerMvpNative.init_app(DoMovement);
+					MultiplayerMvpNative.init_app();
 					break;
 				case DISCONNECT_BUTTON_SIGNAL:
 					MultiplayerMvpClientPlugin.Logger.LogInfo($"Disconnecting");

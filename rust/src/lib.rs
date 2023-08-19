@@ -1,4 +1,4 @@
-use std::{sync::Mutex, thread, time::Duration};
+use std::sync::Mutex;
 
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
@@ -50,7 +50,7 @@ pub extern "C" fn init_app(movement_callback: extern "C" fn(f32, f32)) {
 
             *APP.lock().unwrap() = Some(AppContainer {
                 app,
-                app_exit_event_reader: ManualEventReader::<AppExit>::default(),
+                app_exit_event_reader: default(),
             });
         })
         .run();

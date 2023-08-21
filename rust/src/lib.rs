@@ -54,9 +54,8 @@ pub extern "C" fn init_app() {
 
 #[no_mangle]
 pub extern "C" fn update_app() -> bool {
-    println!("App try update");
     if let Some(ref mut container) = *APP.lock().unwrap() {
-        println!("App real update");
+        println!("App update");
         container.app.update();
 
         if let Some(app_exit_events) = container.app.world.get_resource_mut::<Events<AppExit>>() {
@@ -98,7 +97,16 @@ pub extern "C" fn query_movement_delta() -> MovementDelta {
 #[no_mangle]
 pub extern "C" fn destroy_static_taskpools() {
     println!("[Rust] Destroying static taskpools");
-    ComputeTaskPool::get().terminate_all_threads();
-    AsyncComputeTaskPool::get().terminate_all_threads();
-    IoTaskPool::get().terminate_all_threads();
+
+    if let Some(pool) = ComputeTaskPool::try_get() {
+        pool.terminate_all_threads()
+    }
+
+    if let Some(pool) = AsyncComputeTaskPool::try_get() {
+        pool.terminate_all_threads()
+    }
+
+    if let Some(pool) = IoTaskPool::try_get() {
+        pool.terminate_all_threads()
+    }
 }

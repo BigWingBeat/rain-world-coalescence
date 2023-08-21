@@ -8,6 +8,8 @@ crate-type = ["cdylib"]
 
 [dependencies.bevy]
 # version = "0.11"
-path = "/home/ts/dev/rust/bevyengine/bevy"
+# path = "/home/ts/dev/rust/bevyengine/bevy"
+git = "https://github.com/Pixelstormer/bevy/"
+branch = "taskpool-workaround"
 default-features = false
 features = ["multi-threaded"]

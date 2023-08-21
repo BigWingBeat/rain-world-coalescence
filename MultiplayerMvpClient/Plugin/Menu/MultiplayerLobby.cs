@@ -20,49 +20,102 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 		private readonly FSprite NativeDot;
 
+		private bool hasDoneInitUpdate;
+
+		public override bool FreezeMenuFunctions => hasDoneInitUpdate && base.FreezeMenuFunctions;
+
 		public MultiplayerLobby(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
 		{
-			pages.Add(new Page(this, null, "main", 0));
-			scene = new InteractiveMenuScene(this, pages[0], ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU);
-			pages[0].subObjects.Add(scene);
+			Vector2 screenSize = manager.rainWorld.screenSize;
+			Vector2 screenCenter = manager.rainWorld.screenSize / 2;
+
+			Vector2 bottomLeft = Vector2.zero;
+			Vector2 topRight = screenSize;
+
+			Vector2 standardButtonSize = new(110f, 30f);
+
+			Page page = new(this, null, "main", 0);
+			pages.Add(page);
+
+			scene = new InteractiveMenuScene(this, page, ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU);
+			page.subObjects.Add(scene);
 
 			FSprite backgroundTint = new("pixel")
 			{
 				color = Color.black,
-				anchorX = 0f,
-				anchorY = 0f,
-				scaleX = 1368f,
-				scaleY = 770f,
-				x = -1f,
-				y = -1f,
+				anchorX = 0,
+				anchorY = 0,
+				scaleX = screenSize.x + 2,
+				scaleY = screenSize.y + 2,
+				x = -1,
+				y = -1,
 				alpha = 0.85f
 			};
-			pages[0].Container.AddChild(backgroundTint);
+			page.Container.AddChild(backgroundTint);
 
-			scene.AddIllustration(new MenuIllustration(this, scene, "", "MultiplayerTitle", new Vector2(-2.99f, 265.01f), crispPixels: true, anchorCenter: false));
-			scene.flatIllustrations.Last().sprite.shader = manager.rainWorld.Shaders["MenuText"];
-			scene.flatIllustrations.Last().pos.x += HorizontalMoveToGetCentered(manager);
+			MenuIllustration title = new(this, scene, "", "MultiplayerTitle", Vector2.zero, crispPixels: true, anchorCenter: false);
+			title.sprite.shader = manager.rainWorld.Shaders["MenuText"];
+			scene.AddIllustration(title);
 
-			SimpleButton backButton = new(this, pages[0], Translate(BACK_BUTTON_SIGNAL), BACK_BUTTON_SIGNAL, new Vector2(200f, 50f), new Vector2(110f, 30f));
-			pages[0].subObjects.Add(backButton);
+			SimpleButton backButton = new(this, page, Translate(BACK_BUTTON_SIGNAL), BACK_BUTTON_SIGNAL, new Vector2(200f, 50f), standardButtonSize);
+			page.subObjects.Add(backButton);
 			backObject = backButton;
 
-			Vector2 screenCenter = manager.rainWorld.screenSize / 2;
-
-			MenuTabWrapper tabWrapper = new(this, pages[0]);
-			pages[0].subObjects.Add(tabWrapper);
-
-			OpTextBox textbox = new(new Configurable<string>(""), new(500, 500), 200)
+			// IP address and port number
 			{
-				allowSpace = true
-			};
-			_ = new UIelementWrapper(tabWrapper, textbox);
+				Vector2 serverSocketAddressAnchor = new(screenCenter.x, screenSize.y * 0.6f);
+				MenuTabWrapper tabWrapper = new(this, page);
+				page.subObjects.Add(tabWrapper);
 
-			SimpleButton connectButton = new(this, pages[0], Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new Vector2(500, 380), new Vector2(110, 30));
-			pages[0].subObjects.Add(connectButton);
+				OpLabel serverAddressLabel = new(
+					serverSocketAddressAnchor,
+					new(20, 24),
+					"Server Address:",
+					FLabelAlignment.Left);
 
-			SimpleButton disconnectButton = new(this, pages[0], Translate(DISCONNECT_BUTTON_SIGNAL), DISCONNECT_BUTTON_SIGNAL, new Vector2(500, 280), new Vector2(110, 30));
-			pages[0].subObjects.Add(disconnectButton);
+				float serverAddressLabelWidth = serverAddressLabel.label.textRect.width;
+
+				const float serverAddressWidth = 274;
+				OpTextBox serverAddress = new(
+					new Configurable<string>(""),
+					serverSocketAddressAnchor,
+					 serverAddressWidth);
+
+				OpLabel serverPortLabel = new(
+					serverSocketAddressAnchor,
+					 new(20, 24),
+					  "Port:",
+					  FLabelAlignment.Left);
+
+				float serverPortLabelWidth = serverPortLabel.label.textRect.width;
+
+				const int upDownOffset = -3;
+				const float serverPortWidth = 75;
+				OpUpdown serverPort = new(
+					new Configurable<int>(7110, new ConfigAcceptableRange<int>(0, 9999)),
+					serverSocketAddressAnchor,
+					serverPortWidth);
+				serverPort.PosY += upDownOffset;
+
+				const float padding = 10;
+				float totalWidth = serverAddressLabelWidth + padding + serverAddressWidth + padding + serverPortLabelWidth + padding + serverPortWidth;
+
+				serverAddressLabel.PosX = serverSocketAddressAnchor.x - (totalWidth / 2);
+				serverAddress.PosX = serverAddressLabel.PosX + serverAddressLabelWidth + padding;
+				serverPortLabel.PosX = serverAddress.PosX + serverAddressWidth + padding;
+				serverPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
+
+				_ = new UIelementWrapper(tabWrapper, serverAddressLabel);
+				_ = new UIelementWrapper(tabWrapper, serverAddress);
+				_ = new UIelementWrapper(tabWrapper, serverPortLabel);
+				_ = new UIelementWrapper(tabWrapper, serverPort);
+			}
+
+			SimpleButton connectButton = new(this, page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new Vector2(500, 380), new Vector2(110, 30));
+			page.subObjects.Add(connectButton);
+
+			SimpleButton disconnectButton = new(this, page, Translate(DISCONNECT_BUTTON_SIGNAL), DISCONNECT_BUTTON_SIGNAL, new Vector2(500, 280), new Vector2(110, 30));
+			page.subObjects.Add(disconnectButton);
 
 			NativeDot = new("pixel")
 			{
@@ -72,12 +125,12 @@ namespace MultiplayerMvpClient.Plugin.Menu
 				x = screenCenter.x,
 				y = screenCenter.y
 			};
-			pages[0].Container.AddChild(NativeDot);
+			page.Container.AddChild(NativeDot);
 
 			manager.musicPlayer?.FadeOutAllSongs(25f);
 		}
 
-		public static void SetupHooks()
+		internal static void SetupHooks()
 		{
 			On.Menu.MainMenu.ctor += AddMainMenuButton;
 			On.ProcessManager.PostSwitchMainProcess += SwitchMainProcess;
@@ -109,6 +162,14 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			orig(self, ID);
 		}
 
+		public override void Init()
+		{
+			base.Init();
+			init = true;
+			Update();
+			hasDoneInitUpdate = true;
+		}
+
 		public override void RawUpdate(float dt)
 		{
 			bool exitRequested = MultiplayerMvpNative.update_app();
@@ -120,7 +181,6 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			else
 			{
 				MovementDelta delta = MultiplayerMvpNative.query_movement_delta();
-				MultiplayerMvpClientPlugin.Logger.LogInfo($"Queried delta of: {delta}");
 				NativeDot.x += delta.x;
 				NativeDot.y += delta.y;
 			}

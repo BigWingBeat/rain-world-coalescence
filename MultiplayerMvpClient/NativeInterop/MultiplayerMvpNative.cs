@@ -23,20 +23,33 @@ namespace MultiplayerMvpClient.NativeInterop
 		}
 #pragma warning restore CS8618
 
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+		public delegate void NativeErrorHandler(string error);
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void SetErrorHandler(NativeErrorHandler handler);
+
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void InitApp();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		[return: MarshalAs(UnmanagedType.I1)]
 		public delegate bool UpdateApp();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void DestroyApp();
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+		public delegate void ConnectToServer(string address, ushort port);
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void DestroyStaticTaskPools();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate MovementDelta QueryMovementDelta();
+
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly SetErrorHandler set_error_handler;
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly InitApp init_app;
@@ -46,6 +59,9 @@ namespace MultiplayerMvpClient.NativeInterop
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly DestroyApp destroy_app;
+
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly ConnectToServer connect_to_server;
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly DestroyStaticTaskPools destroy_static_taskpools;

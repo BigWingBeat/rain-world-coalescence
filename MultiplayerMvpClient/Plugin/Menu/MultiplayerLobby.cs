@@ -16,9 +16,13 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 		public static readonly ProcessManager.ProcessID MultiplayerLobbyId = new("MultiplayerLobby", true);
 
-		private bool exiting;
-
 		private readonly FSprite NativeDot;
+
+		private OpTextBox ServerIpAddress;
+
+		private OpUpdown ServerPort;
+
+		private bool exiting;
 
 		private bool hasDoneInitUpdate;
 
@@ -67,48 +71,48 @@ namespace MultiplayerMvpClient.Plugin.Menu
 				MenuTabWrapper tabWrapper = new(this, page);
 				page.subObjects.Add(tabWrapper);
 
-				OpLabel serverAddressLabel = new(
+				OpLabel serverIpAddressLabel = new(
 					serverSocketAddressAnchor,
 					new(20, 24),
-					"Server Address:",
+					Translate("Server Address:"),
 					FLabelAlignment.Left);
 
-				float serverAddressLabelWidth = serverAddressLabel.label.textRect.width;
+				float serverIpAddressLabelWidth = serverIpAddressLabel.label.textRect.width;
 
-				const float serverAddressWidth = 274;
-				OpTextBox serverAddress = new(
+				const float serverIpAddressWidth = 274;
+				ServerIpAddress = new(
 					new Configurable<string>(""),
 					serverSocketAddressAnchor,
-					 serverAddressWidth);
+					 serverIpAddressWidth);
 
 				OpLabel serverPortLabel = new(
 					serverSocketAddressAnchor,
 					 new(20, 24),
-					  "Port:",
+					  Translate("Port:"),
 					  FLabelAlignment.Left);
 
 				float serverPortLabelWidth = serverPortLabel.label.textRect.width;
 
 				const int upDownOffset = -3;
 				const float serverPortWidth = 75;
-				OpUpdown serverPort = new(
+				ServerPort = new(
 					new Configurable<int>(7110, new ConfigAcceptableRange<int>(0, 9999)),
 					serverSocketAddressAnchor,
 					serverPortWidth);
-				serverPort.PosY += upDownOffset;
+				ServerPort.PosY += upDownOffset;
 
 				const float padding = 10;
-				float totalWidth = serverAddressLabelWidth + padding + serverAddressWidth + padding + serverPortLabelWidth + padding + serverPortWidth;
+				float totalWidth = serverIpAddressLabelWidth + padding + serverIpAddressWidth + padding + serverPortLabelWidth + padding + serverPortWidth;
 
-				serverAddressLabel.PosX = serverSocketAddressAnchor.x - (totalWidth / 2);
-				serverAddress.PosX = serverAddressLabel.PosX + serverAddressLabelWidth + padding;
-				serverPortLabel.PosX = serverAddress.PosX + serverAddressWidth + padding;
-				serverPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
+				serverIpAddressLabel.PosX = serverSocketAddressAnchor.x - (totalWidth / 2);
+				ServerIpAddress.PosX = serverIpAddressLabel.PosX + serverIpAddressLabelWidth + padding;
+				serverPortLabel.PosX = ServerIpAddress.PosX + serverIpAddressWidth + padding;
+				ServerPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
 
-				_ = new UIelementWrapper(tabWrapper, serverAddressLabel);
-				_ = new UIelementWrapper(tabWrapper, serverAddress);
+				_ = new UIelementWrapper(tabWrapper, serverIpAddressLabel);
+				_ = new UIelementWrapper(tabWrapper, ServerIpAddress);
 				_ = new UIelementWrapper(tabWrapper, serverPortLabel);
-				_ = new UIelementWrapper(tabWrapper, serverPort);
+				_ = new UIelementWrapper(tabWrapper, ServerPort);
 			}
 
 			SimpleButton connectButton = new(this, page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new Vector2(500, 380), new Vector2(110, 30));
@@ -199,11 +203,28 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 			if (RWInput.CheckPauseButton(0, manager.rainWorld))
 			{
-				OnExit();
+				ExitToMainMenu();
 			}
 		}
 
-		private void OnExit()
+		private void Connect()
+		{
+			string address = ServerIpAddress.value;
+			int port = ServerPort.valueInt;
+			// MultiplayerMvpNative.init_app();
+			if (address.Length > 0)
+			{
+				MultiplayerMvpClientPlugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
+				MultiplayerMvpNative.connect_to_server(address, (ushort)port);
+			}
+		}
+
+		private void Disconnect()
+		{
+			MultiplayerMvpNative.destroy_app();
+		}
+
+		private void ExitToMainMenu()
 		{
 			if (!exiting)
 			{
@@ -220,16 +241,15 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			switch (message)
 			{
 				case CONNECT_BUTTON_SIGNAL:
-					MultiplayerMvpClientPlugin.Logger.LogInfo($"Connecting");
-					MultiplayerMvpNative.init_app();
+					PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
+					Connect();
 					break;
 				case DISCONNECT_BUTTON_SIGNAL:
-					MultiplayerMvpClientPlugin.Logger.LogInfo($"Disconnecting");
-					MultiplayerMvpNative.destroy_app();
+					PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
+					Disconnect();
 					break;
 				case BACK_BUTTON_SIGNAL:
-					MultiplayerMvpClientPlugin.Logger.LogInfo($"Backing out");
-					OnExit();
+					ExitToMainMenu();
 					break;
 			}
 		}

@@ -20,7 +20,7 @@
     <ModNativeFiles Include="../target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
   </ItemGroup>
 
-  <Target Name="Restore"> <!-- Restore is ran by `dotnet restore` -->
+  <Target Name="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
     <MSBuild Projects="@(ModProjectFiles)" Targets="Restore" />
   </Target>
 
@@ -37,7 +37,6 @@
   </Target>
 
   <Target Name="BuildRust">
-    <Exec Command="cross clippy --profile $(NativeBuildProfile) --target $(NativeTargetTriple) -- -W clippy::all" />
     <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" />
   </Target>
 

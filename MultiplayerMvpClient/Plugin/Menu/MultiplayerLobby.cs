@@ -2,6 +2,7 @@ using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
 using MultiplayerMvpClient.NativeInterop;
+using RWCustom;
 using UnityEngine;
 using VanillaMenu = Menu.Menu;
 
@@ -21,6 +22,8 @@ namespace MultiplayerMvpClient.Plugin.Menu
 		private OpTextBox ServerIpAddress;
 
 		private OpUpdown ServerPort;
+
+		private HoldButton ConnectButton;
 
 		private bool exiting;
 
@@ -65,6 +68,13 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			page.subObjects.Add(backButton);
 			backObject = backButton;
 
+			ConnectButton = new(this, page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new(screenCenter.x, screenSize.y * 0.3f), 30);
+			ConnectButton.GetButtonBehavior.greyedOut = true;
+			page.subObjects.Add(ConnectButton);
+
+			// SimpleButton disconnectButton = new(this, page, Translate(DISCONNECT_BUTTON_SIGNAL), DISCONNECT_BUTTON_SIGNAL, new Vector2(500, 280), new Vector2(110, 30));
+			// page.subObjects.Add(disconnectButton);
+
 			// IP address and port number
 			{
 				Vector2 serverSocketAddressAnchor = new(screenCenter.x, screenSize.y * 0.6f);
@@ -84,6 +94,7 @@ namespace MultiplayerMvpClient.Plugin.Menu
 					new Configurable<string>(""),
 					serverSocketAddressAnchor,
 					 serverIpAddressWidth);
+				ServerIpAddress.OnValueUpdate += (_, value, _) => ConnectButton.GetButtonBehavior.greyedOut = string.IsNullOrEmpty(value);
 
 				OpLabel serverPortLabel = new(
 					serverSocketAddressAnchor,
@@ -115,23 +126,40 @@ namespace MultiplayerMvpClient.Plugin.Menu
 				_ = new UIelementWrapper(tabWrapper, ServerPort);
 			}
 
-			SimpleButton connectButton = new(this, page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new Vector2(500, 380), new Vector2(110, 30));
-			page.subObjects.Add(connectButton);
-
-			SimpleButton disconnectButton = new(this, page, Translate(DISCONNECT_BUTTON_SIGNAL), DISCONNECT_BUTTON_SIGNAL, new Vector2(500, 280), new Vector2(110, 30));
-			page.subObjects.Add(disconnectButton);
-
-			NativeDot = new("pixel")
-			{
-				color = Color.white,
-				scaleX = 5,
-				scaleY = 5,
-				x = screenCenter.x,
-				y = screenCenter.y
-			};
-			page.Container.AddChild(NativeDot);
+			// NativeDot = new("pixel")
+			// {
+			// 	color = Color.white,
+			// 	scaleX = 5,
+			// 	scaleY = 5,
+			// 	x = screenCenter.x,
+			// 	y = screenCenter.y
+			// };
+			// page.Container.AddChild(NativeDot);
 
 			manager.musicPlayer?.FadeOutAllSongs(25f);
+
+			MultiplayerMvpNative.set_error_handler(DisplayNativeError);
+		}
+
+		private static void DisplayNativeError(string text)
+		{
+			MultiplayerMvpClientPlugin.Logger.LogInfo($"Native code error: {text}");
+
+			if (Custom.rainWorld?.processManager?.currentMainLoop is MultiplayerLobby menu)
+			{
+				menu.ServerIpAddress.Unassign();
+				menu.ServerPort.Unassign();
+				DialogNotify dialog = new(text, Custom.rainWorld.processManager, () =>
+				{
+					menu.ServerIpAddress.Assign();
+					menu.ServerPort.Assign();
+				});
+				Custom.rainWorld.processManager.ShowDialog(dialog);
+			}
+			else
+			{
+				throw new Exception(text);
+			}
 		}
 
 		internal static void SetupHooks()
@@ -184,9 +212,9 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			}
 			else
 			{
-				MovementDelta delta = MultiplayerMvpNative.query_movement_delta();
-				NativeDot.x += delta.x;
-				NativeDot.y += delta.y;
+				// MovementDelta delta = MultiplayerMvpNative.query_movement_delta();
+				// NativeDot.x += delta.x;
+				// NativeDot.y += delta.y;
 			}
 
 			base.RawUpdate(dt);
@@ -212,11 +240,8 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			string address = ServerIpAddress.value;
 			int port = ServerPort.valueInt;
 			// MultiplayerMvpNative.init_app();
-			if (address.Length > 0)
-			{
-				MultiplayerMvpClientPlugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
-				MultiplayerMvpNative.connect_to_server(address, (ushort)port);
-			}
+			MultiplayerMvpClientPlugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
+			MultiplayerMvpNative.connect_to_server(address, (ushort)port);
 		}
 
 		private void Disconnect()
@@ -226,10 +251,12 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 		private void ExitToMainMenu()
 		{
-			if (!exiting)
+			// Exiting out while a Dialog is up softlocks the game, so don't do that
+			if (!exiting && manager.dialog == null)
 			{
 				exiting = true;
 				MultiplayerMvpNative.destroy_app();
+				MultiplayerMvpNative.reset_to_default_error_handler();
 				PlaySound(SoundID.MENU_Switch_Page_Out);
 				manager.musicPlayer?.FadeOutAllSongs(100f);
 				manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);

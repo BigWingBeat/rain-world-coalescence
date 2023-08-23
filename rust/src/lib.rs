@@ -43,6 +43,11 @@ pub extern "C" fn set_error_handler(handler: ErrorHandlerFn) {
     *ERROR_HANDLER.lock().unwrap() = handler;
 }
 
+#[no_mangle]
+pub extern "C" fn reset_to_default_error_handler() {
+    *ERROR_HANDLER.lock().unwrap() = default_error_handler;
+}
+
 fn handle_error(error: &str) {
     let error = error.replace('\0', "�");
     // SAFETY: We just replaced all null bytes in the string, so this is always safe

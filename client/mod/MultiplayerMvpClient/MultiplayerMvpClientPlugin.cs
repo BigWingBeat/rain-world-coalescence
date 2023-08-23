@@ -1,10 +1,12 @@
-﻿using BepInEx;
+﻿global using Plugin = MultiplayerMvpClient.MultiplayerMvpClientPlugin;
+global using Interop = MultiplayerMvpClient.NativeInterop.MultiplayerMvpClientNative;
+
+using BepInEx;
 using BepInEx.Logging;
-using MultiplayerMvpClient.NativeInterop;
-using MultiplayerMvpClient.Plugin.Menu;
+using MultiplayerMvpClient.Menu;
 using UnityEngine;
 
-namespace MultiplayerMvpClient.Plugin
+namespace MultiplayerMvpClient
 {
 	[BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
 	public class MultiplayerMvpClientPlugin : BaseUnityPlugin
@@ -14,14 +16,14 @@ namespace MultiplayerMvpClient.Plugin
 		public const string PLUGIN_VERSION = "0.1.0";
 
 #pragma warning disable CS8618 // Statics get populated in the constructor
-		public static MultiplayerMvpClientPlugin PluginInstance { get; private set; }
+		public static Plugin Instance { get; private set; }
 
 		internal static new ManualLogSource Logger { get; private set; }
 #pragma warning restore CS8618
 
 		private MultiplayerMvpClientPlugin() : base()
 		{
-			PluginInstance ??= this;
+			Instance ??= this;
 			Logger ??= base.Logger;
 		}
 
@@ -40,7 +42,7 @@ namespace MultiplayerMvpClient.Plugin
 
 		private static void DestroyStaticTaskPools()
 		{
-			MultiplayerMvpClientNative.destroy_static_taskpools();
+			Interop.destroy_static_taskpools();
 		}
 	}
 }

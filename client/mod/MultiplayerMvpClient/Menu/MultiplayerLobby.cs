@@ -1,12 +1,11 @@
 using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
-using MultiplayerMvpClient.NativeInterop;
 using RWCustom;
 using UnityEngine;
 using VanillaMenu = Menu.Menu;
 
-namespace MultiplayerMvpClient.Plugin.Menu
+namespace MultiplayerMvpClient.Menu
 {
 	public class MultiplayerLobby : VanillaMenu
 	{
@@ -138,12 +137,12 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 			manager.musicPlayer?.FadeOutAllSongs(25f);
 
-			MultiplayerMvpClientNative.set_error_handler(DisplayNativeError);
+			Interop.set_error_handler(DisplayNativeError);
 		}
 
 		private static void DisplayNativeError(string text)
 		{
-			MultiplayerMvpClientPlugin.Logger.LogInfo($"Native code error: {text}");
+			Plugin.Logger.LogInfo($"Native code error: {text}");
 
 			if (Custom.rainWorld?.processManager?.currentMainLoop is MultiplayerLobby menu)
 			{
@@ -206,11 +205,11 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 		public override void RawUpdate(float dt)
 		{
-			bool exitRequested = MultiplayerMvpClientNative.update_app();
+			bool exitRequested = Interop.update_app();
 			if (exitRequested)
 			{
-				MultiplayerMvpClientPlugin.Logger.LogInfo("Native app requested exit");
-				MultiplayerMvpClientNative.destroy_app();
+				Plugin.Logger.LogInfo("Native app requested exit");
+				Interop.destroy_app();
 			}
 			else
 			{
@@ -242,13 +241,13 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			string address = ServerIpAddress.value;
 			int port = ServerPort.valueInt;
 			// MultiplayerMvpNative.init_app();
-			MultiplayerMvpClientPlugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
-			MultiplayerMvpClientNative.connect_to_server(address, (ushort)port);
+			Plugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
+			Interop.connect_to_server(address, (ushort)port);
 		}
 
 		private void Disconnect()
 		{
-			MultiplayerMvpClientNative.destroy_app();
+			Interop.destroy_app();
 		}
 
 		private void ExitToMainMenu()
@@ -257,8 +256,8 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			if (!exiting && manager.dialog == null)
 			{
 				exiting = true;
-				MultiplayerMvpClientNative.destroy_app();
-				MultiplayerMvpClientNative.reset_to_default_error_handler();
+				Interop.destroy_app();
+				Interop.reset_to_default_error_handler();
 				PlaySound(SoundID.MENU_Switch_Page_Out);
 				manager.musicPlayer?.FadeOutAllSongs(100f);
 				manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);

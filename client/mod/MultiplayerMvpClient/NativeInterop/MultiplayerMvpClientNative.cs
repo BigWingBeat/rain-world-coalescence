@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using MonoMod.Utils;
-using MultiplayerMvpClient.Plugin;
 
 namespace MultiplayerMvpClient.NativeInterop
 {
@@ -11,7 +10,7 @@ namespace MultiplayerMvpClient.NativeInterop
 #pragma warning disable CS8618 // The delegates are initialised by the `ResolveDynDllImports` method via reflection
 		static MultiplayerMvpClientNative()
 		{
-			string pluginDirectory = Path.GetDirectoryName(MultiplayerMvpClientPlugin.PluginInstance.Info.Location);
+			string pluginDirectory = Path.GetDirectoryName(Plugin.Instance.Info.Location);
 			Dictionary<string, List<DynDllMapping>> mapping = new(1)
 			{
 				[NATIVE_ASSEMBLY_NAME] = new(1) {

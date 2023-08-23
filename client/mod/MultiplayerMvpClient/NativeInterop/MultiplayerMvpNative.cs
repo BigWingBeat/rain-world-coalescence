@@ -6,7 +6,7 @@ namespace MultiplayerMvpClient.NativeInterop
 {
 	public static class MultiplayerMvpNative
 	{
-		public const string NATIVE_ASSEMBLY_NAME = "multiplayer_mvp_native";
+		public const string NATIVE_ASSEMBLY_NAME = "multiplayer_mvp_client";
 
 #pragma warning disable CS8618 // The delegates are initialised by the `ResolveDynDllImports` method via reflection
 		static MultiplayerMvpNative()

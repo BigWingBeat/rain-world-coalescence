@@ -147,10 +147,12 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 			if (Custom.rainWorld?.processManager?.currentMainLoop is MultiplayerLobby menu)
 			{
+				menu.PlaySound(SoundID.MENU_Security_Button_Release);
 				menu.ServerIpAddress.Unassign();
 				menu.ServerPort.Unassign();
 				DialogNotify dialog = new(text, Custom.rainWorld.processManager, () =>
 				{
+					menu.PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
 					menu.ServerIpAddress.Assign();
 					menu.ServerPort.Assign();
 				});
@@ -268,7 +270,6 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			switch (message)
 			{
 				case CONNECT_BUTTON_SIGNAL:
-					PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
 					Connect();
 					break;
 				case DISCONNECT_BUTTON_SIGNAL:

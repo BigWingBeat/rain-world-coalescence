@@ -1,0 +1,10 @@
+[workspace]
+members = ["client", "common", "server"]
+
+[workspace.package]
+authors = ["Pixelstorm"]
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+repository = "https://github.com/Pixelstormer/rw-multiplayer-mvp"
+version = "0.1.0"

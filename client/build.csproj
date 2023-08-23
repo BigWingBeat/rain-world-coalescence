@@ -11,13 +11,13 @@
   <PropertyGroup>
     <ModFolderName>multiplayer_mvp_client</ModFolderName>
     <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
-    <NativeAssemblyName>multiplayer_mvp_native</NativeAssemblyName>
+    <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
-    <ModProjectFiles Include="MultiplayerMvpClient/MultiplayerMvpClient.csproj" />
+    <ModProjectFiles Include="mod/MultiplayerMvpClient/MultiplayerMvpClient.csproj" />
     <ModAssetFiles Include="assets/**/*.*" />
-    <ModNativeFiles Include="rust/target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
+    <ModNativeFiles Include="../target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
   </ItemGroup>
 
   <Target Name="Restore"> <!-- Restore is ran by `dotnet restore` -->
@@ -37,12 +37,12 @@
   </Target>
 
   <Target Name="BuildRust">
-    <Exec Command="cross clippy --profile $(NativeBuildProfile) --target $(NativeTargetTriple) -- -W clippy::all" WorkingDirectory="rust" />
-    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" WorkingDirectory="rust" />
+    <Exec Command="cross clippy --profile $(NativeBuildProfile) --target $(NativeTargetTriple) -- -W clippy::all" />
+    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" />
   </Target>
 
   <Target Name="CleanRust">
-    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" WorkingDirectory="rust" />
+    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" />
   </Target>
 
   <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">

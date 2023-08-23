@@ -6,8 +6,8 @@
 # Rust
 target/
 
-# Build output
-/build
+# Mod build output
+/client/build
 
 # User-specific files
 *.rsuser

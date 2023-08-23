@@ -1,12 +1,18 @@
 [package]
-name = "multiplayer_mvp_native"
-version = "0.1.0"
-edition = "2021"
+name = "multiplayer_mvp_client"
+description = "Native library used by the C# mod"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+version.workspace = true
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
+multiplayer_mvp_common = { path = "../common" }
 anyhow = "1.0"
 widestring = "1.0"
 

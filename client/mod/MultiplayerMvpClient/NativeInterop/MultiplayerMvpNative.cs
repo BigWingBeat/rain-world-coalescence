@@ -4,14 +4,14 @@ using MultiplayerMvpClient.Plugin;
 
 namespace MultiplayerMvpClient.NativeInterop
 {
-	public static class MultiplayerMvpNative
+	public static class MultiplayerMvpClientNative
 	{
 		public const string NATIVE_ASSEMBLY_NAME = "multiplayer_mvp_client";
 
 #pragma warning disable CS8618 // The delegates are initialised by the `ResolveDynDllImports` method via reflection
-		static MultiplayerMvpNative()
+		static MultiplayerMvpClientNative()
 		{
-			string pluginDirectory = Path.GetDirectoryName(MultiplayerMvpClientPlugin.Instance.Info.Location);
+			string pluginDirectory = Path.GetDirectoryName(MultiplayerMvpClientPlugin.PluginInstance.Info.Location);
 			Dictionary<string, List<DynDllMapping>> mapping = new(1)
 			{
 				[NATIVE_ASSEMBLY_NAME] = new(1) {
@@ -19,7 +19,7 @@ namespace MultiplayerMvpClient.NativeInterop
 				}
 			};
 
-			typeof(MultiplayerMvpNative).ResolveDynDllImports(mapping);
+			typeof(MultiplayerMvpClientNative).ResolveDynDllImports(mapping);
 		}
 #pragma warning restore CS8618
 

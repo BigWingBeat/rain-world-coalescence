@@ -138,7 +138,7 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 			manager.musicPlayer?.FadeOutAllSongs(25f);
 
-			MultiplayerMvpNative.set_error_handler(DisplayNativeError);
+			MultiplayerMvpClientNative.set_error_handler(DisplayNativeError);
 		}
 
 		private static void DisplayNativeError(string text)
@@ -206,11 +206,11 @@ namespace MultiplayerMvpClient.Plugin.Menu
 
 		public override void RawUpdate(float dt)
 		{
-			bool exitRequested = MultiplayerMvpNative.update_app();
+			bool exitRequested = MultiplayerMvpClientNative.update_app();
 			if (exitRequested)
 			{
 				MultiplayerMvpClientPlugin.Logger.LogInfo("Native app requested exit");
-				MultiplayerMvpNative.destroy_app();
+				MultiplayerMvpClientNative.destroy_app();
 			}
 			else
 			{
@@ -243,12 +243,12 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			int port = ServerPort.valueInt;
 			// MultiplayerMvpNative.init_app();
 			MultiplayerMvpClientPlugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
-			MultiplayerMvpNative.connect_to_server(address, (ushort)port);
+			MultiplayerMvpClientNative.connect_to_server(address, (ushort)port);
 		}
 
 		private void Disconnect()
 		{
-			MultiplayerMvpNative.destroy_app();
+			MultiplayerMvpClientNative.destroy_app();
 		}
 
 		private void ExitToMainMenu()
@@ -257,8 +257,8 @@ namespace MultiplayerMvpClient.Plugin.Menu
 			if (!exiting && manager.dialog == null)
 			{
 				exiting = true;
-				MultiplayerMvpNative.destroy_app();
-				MultiplayerMvpNative.reset_to_default_error_handler();
+				MultiplayerMvpClientNative.destroy_app();
+				MultiplayerMvpClientNative.reset_to_default_error_handler();
 				PlaySound(SoundID.MENU_Switch_Page_Out);
 				manager.musicPlayer?.FadeOutAllSongs(100f);
 				manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);

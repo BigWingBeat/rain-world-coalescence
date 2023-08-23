@@ -6,22 +6,22 @@ using UnityEngine;
 
 namespace MultiplayerMvpClient.Plugin
 {
-	[BepInPlugin(MyPluginInfo.PLUGIN_GUID, MyPluginInfo.PLUGIN_NAME, MyPluginInfo.PLUGIN_VERSION)]
+	[BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
 	public class MultiplayerMvpClientPlugin : BaseUnityPlugin
 	{
-		public const string PLUGIN_GUID = MyPluginInfo.PLUGIN_GUID;
-		public const string PLUGIN_NAME = MyPluginInfo.PLUGIN_NAME;
-		public const string PLUGIN_VERSION = MyPluginInfo.PLUGIN_VERSION;
+		public const string PLUGIN_GUID = "pixelstorm.multiplayer_mvp";
+		public const string PLUGIN_NAME = "Multiplayer MVP Client";
+		public const string PLUGIN_VERSION = "0.1.0";
 
 #pragma warning disable CS8618 // Statics get populated in the constructor
-		public static MultiplayerMvpClientPlugin Instance { get; private set; }
+		public static MultiplayerMvpClientPlugin PluginInstance { get; private set; }
 
 		internal static new ManualLogSource Logger { get; private set; }
 #pragma warning restore CS8618
 
 		private MultiplayerMvpClientPlugin() : base()
 		{
-			Instance ??= this;
+			PluginInstance ??= this;
 			Logger ??= base.Logger;
 		}
 
@@ -40,7 +40,7 @@ namespace MultiplayerMvpClient.Plugin
 
 		private static void DestroyStaticTaskPools()
 		{
-			MultiplayerMvpNative.destroy_static_taskpools();
+			MultiplayerMvpClientNative.destroy_static_taskpools();
 		}
 	}
 }

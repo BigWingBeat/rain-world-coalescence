@@ -5,6 +5,7 @@
 
 # Rust
 target/
+Cargo.lock
 
 # Mod build output
 /client/build

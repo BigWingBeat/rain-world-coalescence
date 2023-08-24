@@ -10,3 +10,9 @@ version.workspace = true
 
 [dependencies]
 multiplayer_mvp_common = { path = "../common" }
+bevy_quinnet = "0.5"
+
+[dependencies.bevy]
+version = "0.11"
+default-features = false
+features = ["multi-threaded"]

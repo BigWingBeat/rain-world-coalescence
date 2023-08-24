@@ -8,3 +8,6 @@ license = "Apache-2.0"
 publish = false
 repository = "https://github.com/Pixelstormer/rw-multiplayer-mvp"
 version = "0.1.0"
+
+[patch.crates-io]
+bevy = { git = "https://github.com/Pixelstormer/bevy.git", branch = "taskpool-workaround" }

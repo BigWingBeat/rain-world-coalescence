@@ -13,13 +13,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 multiplayer_mvp_common = { path = "../common" }
+bevy_quinnet = "0.5"
 anyhow = "1.0"
 widestring = "1.0"
 
 [dependencies.bevy]
-# version = "0.11"
-# path = "/home/ts/dev/rust/bevyengine/bevy"
-git = "https://github.com/Pixelstormer/bevy/"
-branch = "taskpool-workaround"
+version = "0.11"
 default-features = false
 features = ["multi-threaded"]

@@ -32,6 +32,9 @@ namespace MultiplayerMvpClient.NativeInterop
 		public delegate void ResetToDefaultErrorHandler();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate ushort GetDefaultPort();
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void InitApp();
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -55,6 +58,9 @@ namespace MultiplayerMvpClient.NativeInterop
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly ResetToDefaultErrorHandler reset_to_default_error_handler;
+
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly GetDefaultPort get_default_port;
 
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly InitApp init_app;

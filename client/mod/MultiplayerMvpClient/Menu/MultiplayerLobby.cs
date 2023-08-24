@@ -106,7 +106,7 @@ namespace MultiplayerMvpClient.Menu
 				const int upDownOffset = -3;
 				const float serverPortWidth = 75;
 				ServerPort = new(
-					new Configurable<int>(7110, new ConfigAcceptableRange<int>(0, 9999)),
+					new Configurable<int>(Interop.get_default_port(), new ConfigAcceptableRange<int>(0, 9999)),
 					serverSocketAddressAnchor,
 					serverPortWidth);
 				ServerPort.PosY += upDownOffset;

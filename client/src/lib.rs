@@ -6,31 +6,12 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool},
 };
+use bevy_quinnet::client::QuinnetClientPlugin;
 use widestring::{U16CStr, U16CString, Utf16Str};
-
-struct AppContainer {
-    pub app: App,
-    pub app_exit_event_reader: ManualEventReader<AppExit>,
-}
-
-impl Drop for AppContainer {
-    fn drop(&mut self) {
-        println!("AppContainer is being dropped");
-    }
-}
-
-static APP: Mutex<Option<AppContainer>> = Mutex::new(None);
 
 type ErrorHandlerFn = extern "C" fn(*const u16);
 
 static ERROR_HANDLER: Mutex<ErrorHandlerFn> = Mutex::new(default_error_handler);
-
-#[derive(Resource, Clone, Copy, Default)]
-#[repr(C)]
-pub struct MovementDelta {
-    x: f32,
-    y: f32,
-}
 
 extern "C" fn default_error_handler(error: *const u16) {
     let string = unsafe { U16CStr::from_ptr_str(error) };
@@ -58,11 +39,33 @@ fn handle_error(error: &str) {
 }
 
 #[no_mangle]
+pub extern "C" fn get_default_port() -> u16 {
+    multiplayer_mvp_common::DEFAULT_PORT
+}
+
+struct AppContainer {
+    pub app: App,
+    pub app_exit_event_reader: ManualEventReader<AppExit>,
+}
+
+static APP: Mutex<Option<AppContainer>> = Mutex::new(None);
+
+#[derive(Resource, Clone, Copy, Default)]
+#[repr(C)]
+pub struct MovementDelta {
+    x: f32,
+    y: f32,
+}
+
+#[no_mangle]
 pub extern "C" fn init_app() {
     println!("App init");
 
     App::new()
-        .add_plugins(MinimalPlugins.build().disable::<ScheduleRunnerPlugin>())
+        .add_plugins((
+            MinimalPlugins.build().disable::<ScheduleRunnerPlugin>(),
+            QuinnetClientPlugin::default(),
+        ))
         .insert_resource(MovementDelta::default())
         .add_systems(Update, do_movement)
         .set_runner(move |mut app: App| {
@@ -143,12 +146,16 @@ pub unsafe extern "C" fn connect_to_server(address: *const u16, port: u16) {
 fn try_connect_to_server(address: &str, port: u16) -> anyhow::Result<()> {
     println!("[Rust] Connecting to address: {address} on port: {port}");
 
-    let addresses = (address, port).to_socket_addrs()?;
+    // `SocketAddr` implements `Ord` such that IPv4 addresses get sorted before IPv6 addresses, so we sort the
+    // given addresses and then iterate over them in reverse, meaning IPv6 addresses get prioritised.
+    let mut addresses = (address, port).to_socket_addrs()?;
+    let addresses = addresses.as_mut_slice();
+    addresses.sort_unstable();
 
     let len = addresses.len();
     println!("[Rust] Resolved {len} addresses:");
 
-    for (i, address) in addresses.enumerate() {
+    for (i, address) in addresses.iter().rev().enumerate() {
         println!("[Rust] #{i}: {address}");
     }
 

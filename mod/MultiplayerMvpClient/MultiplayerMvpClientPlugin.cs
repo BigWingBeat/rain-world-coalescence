@@ -11,7 +11,7 @@ namespace MultiplayerMvpClient
 	[BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
 	public class MultiplayerMvpClientPlugin : BaseUnityPlugin
 	{
-		public const string PLUGIN_GUID = "pixelstorm.multiplayer_mvp";
+		public const string PLUGIN_GUID = "pixelstorm.multiplayer_mvp.client";
 		public const string PLUGIN_NAME = "Multiplayer MVP Client";
 		public const string PLUGIN_VERSION = "0.1.0";
 

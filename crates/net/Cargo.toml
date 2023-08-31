@@ -1,0 +1,18 @@
+[package]
+name = "multiplayer_mvp_net"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+async-io = "1.13"
+bevy.workspace = true
+quinn = { version = "0.10", default-features = false, features = [
+	"native-certs",
+	"tls-rustls",
+	"log",
+] }
+serde = { version = "1.0", features = ["derive"] }

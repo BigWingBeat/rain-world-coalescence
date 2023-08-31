@@ -1,0 +1,10 @@
+[build]
+pre-build = [
+	"apt-get update && apt-get install --assume-yes --no-install-recommends clang-10",
+]
+
+[build.env]
+passthrough = [
+	"CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/lib/llvm-10/bin/clang",
+	"CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS=-Clink-arg=-fuse-ld=lld",
+]

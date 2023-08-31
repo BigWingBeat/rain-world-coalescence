@@ -9,15 +9,15 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <ModFolderName>multiplayer_mvp_client</ModFolderName>
+    <ModBuildFolder>mod/build/multiplayer_mvp_client</ModBuildFolder>
     <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
     <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
   </PropertyGroup>
 
   <ItemGroup>
     <ModProjectFiles Include="mod/MultiplayerMvpClient/MultiplayerMvpClient.csproj" />
-    <ModAssetFiles Include="assets/**/*.*" />
-    <ModNativeFiles Include="../target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
+    <ModAssetFiles Include="mod/assets/**/*.*" />
+    <ModNativeFiles Include="target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
   </ItemGroup>
 
   <Target Name="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
@@ -45,13 +45,13 @@
   </Target>
 
   <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">
-    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="build/$(ModFolderName)/%(RecursiveDir)" />
-    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="build/$(ModFolderName)/plugins" />
-    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="build/$(ModFolderName)/native" />
+    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(ModBuildFolder)/%(RecursiveDir)" />
+    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="$(ModBuildFolder)/plugins" />
+    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="$(ModBuildFolder)/native" />
   </Target>
 
   <Target Name="CleanModFolder">
-    <RemoveDir Directories="build" />
+    <RemoveDir Directories="$(ModBuildFolder)" />
   </Target>
 
 </Project>

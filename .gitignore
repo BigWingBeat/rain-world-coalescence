@@ -8,7 +8,7 @@ target/
 Cargo.lock
 
 # Mod build output
-/client/build
+/mod/build
 
 # User-specific files
 *.rsuser

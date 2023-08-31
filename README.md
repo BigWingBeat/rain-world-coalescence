@@ -1,4 +1,4 @@
-# Multiplayer MVP
+# Multiplayer MVP (aka Coalescence)
 
 This mod is an MVP (Minimum Viable Product) to demonstrate 'real' (Not via Parsec/Steam Remote Play etc.) online multiplayer for Rain World.
 

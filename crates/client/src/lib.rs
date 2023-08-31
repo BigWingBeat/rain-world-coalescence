@@ -1,12 +1,15 @@
+mod app;
+mod ffi;
+
 use std::{net::ToSocketAddrs, sync::Mutex};
 
+use app::AppContainer;
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
     ecs::event::ManualEventReader,
     prelude::*,
     tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool},
 };
-use bevy_quinnet::client::QuinnetClientPlugin;
 use widestring::{U16CStr, U16CString, Utf16Str};
 
 type ErrorHandlerFn = extern "C" fn(*const u16);
@@ -40,12 +43,7 @@ fn handle_error(error: &str) {
 
 #[no_mangle]
 pub extern "C" fn get_default_port() -> u16 {
-    multiplayer_mvp_common::DEFAULT_PORT
-}
-
-struct AppContainer {
-    pub app: App,
-    pub app_exit_event_reader: ManualEventReader<AppExit>,
+    multiplayer_mvp_net::DEFAULT_PORT
 }
 
 static APP: Mutex<Option<AppContainer>> = Mutex::new(None);
@@ -60,29 +58,6 @@ pub struct MovementDelta {
 #[no_mangle]
 pub extern "C" fn init_app() {
     println!("App init");
-
-    App::new()
-        .add_plugins((
-            MinimalPlugins.build().disable::<ScheduleRunnerPlugin>(),
-            QuinnetClientPlugin::default(),
-        ))
-        .insert_resource(MovementDelta::default())
-        .add_systems(Update, do_movement)
-        .set_runner(move |mut app: App| {
-            while !app.ready() {
-                bevy::tasks::tick_global_task_pools_on_main_thread();
-            }
-            app.finish();
-            app.cleanup();
-
-            // app.update();
-
-            *APP.lock().unwrap() = Some(AppContainer {
-                app,
-                app_exit_event_reader: default(),
-            });
-        })
-        .run();
 }
 
 #[no_mangle]
@@ -163,7 +138,7 @@ fn try_connect_to_server(address: &str, port: u16) -> anyhow::Result<()> {
 }
 
 #[no_mangle]
-pub extern "C" fn destroy_static_taskpools() {
+extern "C" fn destroy_static_taskpools() {
     println!("[Rust] Destroying static taskpools");
 
     if let Some(pool) = ComputeTaskPool::try_get() {

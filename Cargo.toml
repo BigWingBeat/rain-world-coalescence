@@ -1,5 +1,6 @@
 [workspace]
-members = ["client", "common", "server"]
+members = ["crates/*"]
+resolver = "2"
 
 [workspace.package]
 authors = ["Pixelstorm"]
@@ -9,5 +10,7 @@ publish = false
 repository = "https://github.com/Pixelstormer/rw-multiplayer-mvp"
 version = "0.1.0"
 
-[patch.crates-io]
-bevy = { git = "https://github.com/Pixelstormer/bevy.git", branch = "taskpool-workaround" }
+[workspace.dependencies]
+bevy = { git = "https://github.com/Pixelstormer/bevy.git", branch = "fork-main", default-features = false, features = [
+	"multi-threaded",
+] }

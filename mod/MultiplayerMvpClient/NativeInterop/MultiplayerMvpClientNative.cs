@@ -69,6 +69,11 @@ namespace MultiplayerMvpClient.NativeInterop
 		public static readonly DefaultPort default_port;
 
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void ConfigureNativeLogging();
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly ConfigureNativeLogging configure_native_logging;
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
 		public delegate void TerminateTaskpoolThreads();
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly TerminateTaskpoolThreads terminate_taskpool_threads;

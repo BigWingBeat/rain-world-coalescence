@@ -8,7 +8,7 @@ use bevy::{
 use multiplayer_mvp_net::AppEndpoint;
 use widestring::{U16CStr, U16CString, Utf16Str};
 
-use crate::app::AppContainer;
+use crate::app::{configure_logging, AppContainer};
 
 /// The `#[repr(u8)]` functions according to https://github.com/rust-lang/rfcs/blob/master/text/2195-really-tagged-unions.md
 ///
@@ -136,6 +136,11 @@ pub extern "C" fn free_connection_task(task: Option<Box<ConnectionTask>>) {
 #[no_mangle]
 pub extern "C" fn default_port() -> u16 {
     multiplayer_mvp_net::DEFAULT_PORT
+}
+
+#[no_mangle]
+pub extern "C" fn configure_native_logging() {
+    configure_logging()
 }
 
 #[no_mangle]

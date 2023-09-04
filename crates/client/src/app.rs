@@ -1,4 +1,5 @@
 use std::{
+    fs::File,
     net::{SocketAddr, ToSocketAddrs},
     sync::Arc,
 };
@@ -7,11 +8,13 @@ use anyhow::{bail, ensure};
 use bevy::{
     app::{AppExit, ScheduleRunnerPlugin},
     ecs::event::ManualEventReader,
-    log::LogPlugin,
+    log::Level,
     prelude::*,
 };
 use multiplayer_mvp_net::{AppEndpoint, NoServerVerification};
 use quinn::{Connection, Endpoint};
+use tracing_log::LogTracer;
+use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, EnvFilter, Registry};
 
 #[derive(Debug)]
 pub struct AppContainer {
@@ -25,11 +28,8 @@ impl AppContainer {
 
         // `create_endpoint` is called inline so that it happens after the `TaskPoolPlugin` has initialised
         // the default task pools in `add_plugins` (Plugins get eagerly built as soon as they're added).
-        app.add_plugins((
-            LogPlugin::default(),
-            MinimalPlugins.build().disable::<ScheduleRunnerPlugin>(),
-        ))
-        .insert_resource(AppEndpoint(create_endpoint()?));
+        app.add_plugins(MinimalPlugins.build().disable::<ScheduleRunnerPlugin>())
+            .insert_resource(AppEndpoint(create_endpoint()?));
         // .add_systems(Startup, create_endpoint);
 
         while !app.ready() {
@@ -120,6 +120,33 @@ impl AppContainer {
 
         Ok(())
     }
+}
+
+/// Configures native logging permanently for the whole application. Calling this more than once will panic.
+/// This is used rather than Bevy's built-in `LogPlugin`, because that plugin configures logging in a way we
+/// don't want, and that isn't configurable.
+pub fn configure_logging() {
+    const DEFAULT_LOG_LEVEL: Level = Level::INFO;
+    const DEFAULT_LOG_FILTER: &str = "wgpu=error,naga=warn";
+
+    let log_file = File::create(concat!(env!("CARGO_PKG_NAME"), ".native.log")).unwrap();
+
+    let subscriber = Registry::default()
+        .with(
+            EnvFilter::try_from_default_env()
+                .or_else(|_| {
+                    EnvFilter::try_new(format!("{},{}", DEFAULT_LOG_LEVEL, DEFAULT_LOG_FILTER))
+                })
+                .unwrap(),
+        )
+        .with(
+            tracing_subscriber::fmt::Layer::default()
+                .with_ansi(false)
+                .with_writer(log_file),
+        );
+
+    LogTracer::init().unwrap();
+    tracing::subscriber::set_global_default(subscriber).unwrap();
 }
 
 fn create_config() -> quinn::ClientConfig {

@@ -30,6 +30,7 @@ namespace MultiplayerMvpClient
 #pragma warning disable IDE0051, CA1822 // Unity uses reflection to call Awake, for this to work it must not be static
 		private void Awake()
 		{
+			Interop.configure_native_logging();
 			SetupHooks();
 			MultiplayerLobby.SetupHooks();
 		}

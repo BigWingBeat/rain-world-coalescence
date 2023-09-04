@@ -22,75 +22,89 @@ namespace MultiplayerMvpClient.NativeInterop
 		}
 #pragma warning restore CS8618
 
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-		public delegate void NativeErrorHandler(string error);
-
 		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void SetErrorHandler(NativeErrorHandler handler);
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void ResetToDefaultErrorHandler();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate ushort GetDefaultPort();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void InitApp();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		[return: MarshalAs(UnmanagedType.I1)]
-		public delegate bool UpdateApp();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void DestroyApp();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
-		public delegate void ConnectToServer(string address, ushort port);
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate void DestroyStaticTaskPools();
-
-		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-		public delegate MovementDelta QueryMovementDelta();
-
+		public delegate NewAppResult NewApp();
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly SetErrorHandler set_error_handler;
+		public static readonly NewApp new_app;
 
-		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly ResetToDefaultErrorHandler reset_to_default_error_handler;
-
-		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly GetDefaultPort get_default_port;
-
-		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly InitApp init_app;
-
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		[return: MarshalAs(UnmanagedType.U1)]
+		public delegate bool UpdateApp(IntPtr appHandle);
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
 		public static readonly UpdateApp update_app;
 
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+		public delegate IntPtr AppConnectToServer(IntPtr appHandle, string address, ushort port);
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly DestroyApp destroy_app;
+		public static readonly AppConnectToServer app_connect_to_server;
 
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void FreeApp(IntPtr appHandle);
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly ConnectToServer connect_to_server;
+		public static readonly FreeApp free_app;
 
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl, CharSet = CharSet.Unicode)]
+		public delegate string FormatError(IntPtr errorHandle);
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly DestroyStaticTaskPools destroy_static_taskpools;
+		public static readonly FormatError format_error;
 
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void FreeError(IntPtr errorHandle);
 		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
-		public static readonly QueryMovementDelta query_movement_delta;
+		public static readonly FreeError free_error;
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate PollConnectionTaskResult PollConnectionTask(IntPtr taskHandle);
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly PollConnectionTask poll_connection_task;
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void FreeConnectionTask(IntPtr taskHandle);
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly FreeConnectionTask free_connection_task;
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate ushort DefaultPort();
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly DefaultPort default_port;
+
+		[UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+		public delegate void TerminateTaskpoolThreads();
+		[DynDllImport(NATIVE_ASSEMBLY_NAME)]
+		public static readonly TerminateTaskpoolThreads terminate_taskpool_threads;
 	}
 
-	[StructLayout(LayoutKind.Sequential)]
-	public struct MovementDelta
+	[StructLayout(LayoutKind.Explicit)]
+	public struct NewAppResult
 	{
-		public float x;
-		public float y;
-
-		public override string ToString()
+		public enum NewAppResultTag : byte
 		{
-			return $"MovementDelta({x}, {y})";
+			App,
+			Error
 		}
+		[FieldOffset(0)]
+		public NewAppResultTag tag;
+		[FieldOffset(4)]
+		public IntPtr AppHandle;
+		[FieldOffset(4)]
+		public IntPtr ErrorHandle;
+	}
+
+	[StructLayout(LayoutKind.Explicit)]
+	public struct PollConnectionTaskResult
+	{
+		public enum PollConnectionTaskResultTag : byte
+		{
+			IsCompleted,
+			Error
+		}
+		[FieldOffset(0)]
+		public PollConnectionTaskResultTag tag;
+		[FieldOffset(1)]
+		[MarshalAs(UnmanagedType.U1)]
+		public bool IsCompleted;
+		[FieldOffset(4)]
+		public IntPtr ErrorHandle;
 	}
 }
 

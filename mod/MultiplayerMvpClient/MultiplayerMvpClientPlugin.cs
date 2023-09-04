@@ -42,7 +42,7 @@ namespace MultiplayerMvpClient
 
 		private static void DestroyStaticTaskPools()
 		{
-			Interop.destroy_static_taskpools();
+			Interop.terminate_taskpool_threads();
 		}
 	}
 }

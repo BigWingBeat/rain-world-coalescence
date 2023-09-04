@@ -16,13 +16,14 @@ namespace MultiplayerMvpClient.Menu
 
 		public static readonly ProcessManager.ProcessID MultiplayerLobbyId = new("MultiplayerLobby", true);
 
-		private readonly FSprite NativeDot;
-
 		private OpTextBox ServerIpAddress;
 
 		private OpUpdown ServerPort;
 
 		private HoldButton ConnectButton;
+
+		private IntPtr appHandle = IntPtr.Zero;
+		private IntPtr connectionTaskHandle = IntPtr.Zero;
 
 		private bool exiting;
 
@@ -106,7 +107,7 @@ namespace MultiplayerMvpClient.Menu
 				const int upDownOffset = -3;
 				const float serverPortWidth = 75;
 				ServerPort = new(
-					new Configurable<int>(Interop.get_default_port(), new ConfigAcceptableRange<int>(0, 9999)),
+					new Configurable<int>(Interop.default_port(), new ConfigAcceptableRange<int>(0, 9999)),
 					serverSocketAddressAnchor,
 					serverPortWidth);
 				ServerPort.PosY += upDownOffset;
@@ -125,42 +126,23 @@ namespace MultiplayerMvpClient.Menu
 				_ = new UIelementWrapper(tabWrapper, ServerPort);
 			}
 
-			// NativeDot = new("pixel")
-			// {
-			// 	color = Color.white,
-			// 	scaleX = 5,
-			// 	scaleY = 5,
-			// 	x = screenCenter.x,
-			// 	y = screenCenter.y
-			// };
-			// page.Container.AddChild(NativeDot);
-
 			manager.musicPlayer?.FadeOutAllSongs(25f);
-
-			Interop.set_error_handler(DisplayNativeError);
 		}
 
-		private static void DisplayNativeError(string text)
+		private void DisplayNativeError(string text)
 		{
 			Plugin.Logger.LogInfo($"Native code error: {text}");
 
-			if (Custom.rainWorld?.processManager?.currentMainLoop is MultiplayerLobby menu)
+			PlaySound(SoundID.MENU_Security_Button_Release);
+			ServerIpAddress.Unassign();
+			ServerPort.Unassign();
+			DialogNotify dialog = new(text, manager, () =>
 			{
-				menu.PlaySound(SoundID.MENU_Security_Button_Release);
-				menu.ServerIpAddress.Unassign();
-				menu.ServerPort.Unassign();
-				DialogNotify dialog = new(text, Custom.rainWorld.processManager, () =>
-				{
-					menu.PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
-					menu.ServerIpAddress.Assign();
-					menu.ServerPort.Assign();
-				});
-				Custom.rainWorld.processManager.ShowDialog(dialog);
-			}
-			else
-			{
-				throw new Exception(text);
-			}
+				PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
+				ServerIpAddress.Assign();
+				ServerPort.Assign();
+			});
+			manager.ShowDialog(dialog);
 		}
 
 		internal static void SetupHooks()
@@ -205,17 +187,43 @@ namespace MultiplayerMvpClient.Menu
 
 		public override void RawUpdate(float dt)
 		{
-			bool exitRequested = Interop.update_app();
-			if (exitRequested)
+			if (appHandle != IntPtr.Zero)
 			{
-				Plugin.Logger.LogInfo("Native app requested exit");
-				Interop.destroy_app();
+				bool exitRequested = Interop.update_app(appHandle);
+				if (exitRequested)
+				{
+					Plugin.Logger.LogInfo("Native app requested exit");
+					Interop.free_app(appHandle);
+					appHandle = IntPtr.Zero;
+					if (connectionTaskHandle != IntPtr.Zero)
+					{
+						Interop.free_connection_task(connectionTaskHandle);
+						connectionTaskHandle = IntPtr.Zero;
+					}
+				}
 			}
-			else
+
+			if (connectionTaskHandle != IntPtr.Zero)
 			{
-				// MovementDelta delta = MultiplayerMvpNative.query_movement_delta();
-				// NativeDot.x += delta.x;
-				// NativeDot.y += delta.y;
+				var pollResult = Interop.poll_connection_task(connectionTaskHandle);
+				switch (pollResult.tag)
+				{
+					case NativeInterop.PollConnectionTaskResult.PollConnectionTaskResultTag.IsCompleted:
+						if (pollResult.IsCompleted)
+						{
+							Interop.free_connection_task(connectionTaskHandle);
+							connectionTaskHandle = IntPtr.Zero;
+						}
+						break;
+					case NativeInterop.PollConnectionTaskResult.PollConnectionTaskResultTag.Error:
+						var error = pollResult.ErrorHandle;
+						string errorMessage = Interop.format_error(error);
+						Interop.free_error(error);
+						Interop.free_connection_task(connectionTaskHandle);
+						connectionTaskHandle = IntPtr.Zero;
+						DisplayNativeError(errorMessage);
+						break;
+				}
 			}
 
 			base.RawUpdate(dt);
@@ -239,15 +247,38 @@ namespace MultiplayerMvpClient.Menu
 		private void Connect()
 		{
 			string address = ServerIpAddress.value;
-			int port = ServerPort.valueInt;
-			// MultiplayerMvpNative.init_app();
-			Plugin.Logger.LogInfo($"C# connecting to: {address} on port: {port}");
-			Interop.connect_to_server(address, (ushort)port);
+			ushort port = (ushort)ServerPort.valueInt;
+			Plugin.Logger.LogInfo($"Connecting to: {address} on port: {port}");
+
+			var newAppResult = Interop.new_app();
+			switch (newAppResult.tag)
+			{
+				case NativeInterop.NewAppResult.NewAppResultTag.App:
+					appHandle = newAppResult.AppHandle;
+					connectionTaskHandle = Interop.app_connect_to_server(appHandle, address, port);
+					break;
+				case NativeInterop.NewAppResult.NewAppResultTag.Error:
+					var error = newAppResult.ErrorHandle;
+					string errorMessage = Interop.format_error(error);
+					Interop.free_error(error);
+					DisplayNativeError(errorMessage);
+					break;
+			}
 		}
 
 		private void Disconnect()
 		{
-			Interop.destroy_app();
+			if (appHandle != IntPtr.Zero)
+			{
+				Interop.free_app(appHandle);
+				appHandle = IntPtr.Zero;
+			}
+
+			if (connectionTaskHandle != IntPtr.Zero)
+			{
+				Interop.free_connection_task(connectionTaskHandle);
+				connectionTaskHandle = IntPtr.Zero;
+			}
 		}
 
 		private void ExitToMainMenu()
@@ -256,8 +287,7 @@ namespace MultiplayerMvpClient.Menu
 			if (!exiting && manager.dialog == null)
 			{
 				exiting = true;
-				Interop.destroy_app();
-				Interop.reset_to_default_error_handler();
+				Disconnect();
 				PlaySound(SoundID.MENU_Switch_Page_Out);
 				manager.musicPlayer?.FadeOutAllSongs(100f);
 				manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);

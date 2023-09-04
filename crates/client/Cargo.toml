@@ -13,6 +13,10 @@ crate-type = ["cdylib"]
 
 [dependencies]
 multiplayer_mvp_net = { path = "../net" }
+async-io = "1.13"
 anyhow = "1.0"
+futures-lite = { version = "1.13", default-features = false }
 widestring = "1.0"
 bevy.workspace = true
+quinn.workspace = true
+rustls.workspace = true

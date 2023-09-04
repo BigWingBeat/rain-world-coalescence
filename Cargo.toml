@@ -14,3 +14,12 @@ version = "0.1.0"
 bevy = { git = "https://github.com/Pixelstormer/bevy.git", branch = "fork-main", default-features = false, features = [
 	"multi-threaded",
 ] }
+quinn = { version = "0.10", default-features = false, features = [
+	"native-certs",
+	"tls-rustls",
+	"log",
+] }
+rustls = { version = "0.21", default-features = false, features = [
+	"logging",
+	"dangerous_configuration",
+] }

@@ -14,6 +14,7 @@
     <ModBuildFolder>mod/build/multiplayer_mvp_client</ModBuildFolder>
     <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
     <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
+    <CrossArgs>--profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)</CrossArgs>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,11 +40,11 @@
   </Target>
 
   <Target Name="BuildRust">
-    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)" />
+    <Exec Command="cross build $(CrossArgs)" />
   </Target>
 
   <Target Name="CleanRust">
-    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)" />
+    <Exec Command="cross clean $(CrossArgs)" />
   </Target>
 
   <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">

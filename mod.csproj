@@ -39,11 +39,11 @@
   </Target>
 
   <Target Name="BuildRust">
-    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" />
+    <Exec Command="cross build --profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)" />
   </Target>
 
   <Target Name="CleanRust">
-    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple)" />
+    <Exec Command="cross clean --profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)" />
   </Target>
 
   <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">

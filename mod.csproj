@@ -1,6 +1,8 @@
-<Project DefaultTargets="BuildModFolder"> <!-- DefaultTargets is ran by `dotnet build` -->
+<Project DefaultTargets="BuildModFolder" Sdk="Microsoft.Build.NoTargets/3.7.0"> <!-- DefaultTargets is ran by `dotnet build` -->
 
   <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <!-- If no Configuration is specified, default to Debug -->
     <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>
     <!-- Translate from MSBuild Configurations to Rust Profiles -->

@@ -3,8 +3,6 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
-    <!-- If no Configuration is specified, default to Debug -->
-    <Configuration Condition="'$(Configuration)'==''">Debug</Configuration>
     <!-- Translate from MSBuild Configurations to Rust Profiles -->
     <NativeBuildProfile Condition="'$(Configuration)'=='Debug'">dev</NativeBuildProfile>
     <NativeBuildProfile Condition="'$(Configuration)'=='Release'">release</NativeBuildProfile>
@@ -23,11 +21,9 @@
     <ModNativeFiles Include="target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
   </ItemGroup>
 
-  <Target Name="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
+  <Target Name="RestoreCSharp" AfterTargets="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
     <MSBuild Projects="@(ModProjectFiles)" Targets="Restore" />
   </Target>
-
-  <Target Name="Clean" DependsOnTargets="CleanModFolder;CleanRust;CleanCSharp" /> <!-- Clean is ran by `dotnet clean` -->
 
   <Target Name="BuildCSharp">
     <MSBuild Projects="@(ModProjectFiles)" Targets="Build">
@@ -35,7 +31,7 @@
     </MSBuild>
   </Target>
 
-  <Target Name="CleanCSharp">
+  <Target Name="CleanCSharp" AfterTargets="Clean"> <!-- Clean is ran by `dotnet clean` -->
     <MSBuild Projects="@(ModProjectFiles)" Targets="Clean" />
   </Target>
 
@@ -43,7 +39,7 @@
     <Exec Command="cross build $(CrossArgs)" />
   </Target>
 
-  <Target Name="CleanRust">
+  <Target Name="CleanRust" AfterTargets="Clean">
     <Exec Command="cross clean $(CrossArgs)" />
   </Target>
 

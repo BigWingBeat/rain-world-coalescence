@@ -1,4 +1,4 @@
-<Project DefaultTargets="BuildModFolder" Sdk="Microsoft.Build.NoTargets/3.7.0"> <!-- DefaultTargets is ran by `dotnet build` -->
+<Project Sdk="Microsoft.Build.NoTargets/3.7.0">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <ModBuildFolder>mod/build/multiplayer_mvp_client</ModBuildFolder>
+    <ModBuildFolder>multiplayer_mvp_client</ModBuildFolder>
     <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
     <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
     <CrossArgs>--profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)</CrossArgs>
@@ -18,10 +18,11 @@
   <ItemGroup>
     <ModProjectFiles Include="mod/MultiplayerMvpClient/MultiplayerMvpClient.csproj" />
     <ModAssetFiles Include="mod/assets/**/*.*" />
+    <!-- The output path for the native assembly must be hardcoded for now, see https://github.com/rust-lang/cargo/issues/6790 -->
     <ModNativeFiles Include="target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
   </ItemGroup>
 
-  <Target Name="RestoreCSharp" AfterTargets="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
+  <Target Name="RestoreCSharp" BeforeTargets="Restore"> <!-- Restore is ran implicitly by various `dotnet` commands -->
     <MSBuild Projects="@(ModProjectFiles)" Targets="Restore" />
   </Target>
 
@@ -31,26 +32,34 @@
     </MSBuild>
   </Target>
 
-  <Target Name="CleanCSharp" AfterTargets="Clean"> <!-- Clean is ran by `dotnet clean` -->
+  <Target Name="CleanCSharp" BeforeTargets="Clean"> <!-- Clean is ran by `dotnet clean` -->
     <MSBuild Projects="@(ModProjectFiles)" Targets="Clean" />
   </Target>
 
-  <Target Name="BuildRust">
+  <Target Name="BuildRust" Outputs="@(ModNativeFiles)">
     <Exec Command="cross build $(CrossArgs)" />
   </Target>
 
-  <Target Name="CleanRust" AfterTargets="Clean">
+  <Target Name="CleanRust" BeforeTargets="Clean">
     <Exec Command="cross clean $(CrossArgs)" />
   </Target>
 
-  <Target Name="BuildModFolder" DependsOnTargets="CleanModFolder;BuildRust;BuildCSharp">
-    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(ModBuildFolder)/%(RecursiveDir)" />
-    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="$(ModBuildFolder)/plugins" />
-    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="$(ModBuildFolder)/native" />
-  </Target>
-
-  <Target Name="CleanModFolder">
-    <RemoveDir Directories="$(ModBuildFolder)" />
+  <!--
+    Runs on `BeforeTargets="PrepareForRun"` to enable incremental builds, see https://github.com/microsoft/MSBuildSdks/tree/main/src/NoTargets#example 
+    The files must be written under $(OutDir) for incremental cleaning to work, as files outside that directory get ignored by the clean
+    To understand Inputs, Outputs and FileWrites, read https://github.com/xamarin/xamarin-android/blob/main/Documentation/guides/MSBuildBestPractices.md#incremental-builds
+  -->
+  <Target Name="BuildModFolder"
+      BeforeTargets="PrepareForRun"
+      DependsOnTargets="BuildRust;BuildCSharp"
+      Inputs="@(ModAssetFiles);@(ModPluginFiles);@(ModNativeFiles)"
+      Outputs="@(ModAssetFiles->'$(OutDir)$(ModBuildFolder)/%(RecursiveDir)%(Filename)%(Extension)');@(ModPluginFiles->'$(OutDir)$(ModBuildFolder)/plugins/%(Filename)%(Extension)');@(ModNativeFiles->'$(OutDir)$(ModBuildFolder)/native/%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/%(RecursiveDir)" />
+    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/plugins" />
+    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/native" />
+    <ItemGroup>
+      <FileWrites Include="@(ModAssetFiles->'$(OutDir)$(ModBuildFolder)/%(RecursiveDir)%(Filename)%(Extension)');@(ModPluginFiles->'$(OutDir)$(ModBuildFolder)/plugins/%(Filename)%(Extension)');@(ModNativeFiles->'$(OutDir)$(ModBuildFolder)/native/%(Filename)%(Extension)')" />
+    </ItemGroup>
   </Target>
 
 </Project>

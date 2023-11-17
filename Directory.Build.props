@@ -1,0 +1,9 @@
+<Project>
+  <!-- See https://aka.ms/dotnet/msbuild/customize for more details on customizing your build -->
+  <PropertyGroup>
+
+    <!-- https://github.com/dotnet/designs/blob/simplify-output-paths-2/accepted/2023/simplify-output-paths.md -->
+    <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+
+  </PropertyGroup>
+</Project>

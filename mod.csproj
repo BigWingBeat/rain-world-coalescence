@@ -3,6 +3,8 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <!-- On OutDir vs OutputPath: https://github.com/dotnet/msbuild/blob/0a0959f86064b7922731df2978b051a744e75072/src/Tasks/Microsoft.Common.CurrentVersion.targets#L103-L133 -->
+    <OutDir>artifacts/mod</OutDir>
     <!-- Translate from MSBuild Configurations to Rust Profiles -->
     <NativeBuildProfile Condition="'$(Configuration)'=='Debug'">dev</NativeBuildProfile>
     <NativeBuildProfile Condition="'$(Configuration)'=='Release'">release</NativeBuildProfile>
@@ -46,7 +48,7 @@
 
   <!--
     Runs on `BeforeTargets="PrepareForRun"` to enable incremental builds, see https://github.com/microsoft/MSBuildSdks/tree/main/src/NoTargets#example 
-    The files must be written under $(OutDir) for incremental cleaning to work, as files outside that directory get ignored by the clean
+    The files must be written under $(OutDir) for incremental cleaning to work, as files outside that directory get ignored by the clean: https://github.com/dotnet/msbuild/blob/0a0959f86064b7922731df2978b051a744e75072/src/Tasks/Microsoft.Common.CurrentVersion.targets#L5580-L5602
     To understand Inputs, Outputs and FileWrites, read https://github.com/xamarin/xamarin-android/blob/main/Documentation/guides/MSBuildBestPractices.md#incremental-builds
   -->
   <Target Name="BuildModFolder"

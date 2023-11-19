@@ -1,5 +1,9 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project>
+  <!-- Sdk properties and targets are imported manually to make the ____DependsOn properties work -->
+  <!-- https://learn.microsoft.com/en-us/visualstudio/msbuild/how-to-use-project-sdk#use-the-import-element-anywhere-in-your-project -->
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk" />
 
+  <!-- On OutDir vs OutputPath: https://github.com/dotnet/msbuild/blob/0a0959f86064b7922731df2978b051a744e75072/src/Tasks/Microsoft.Common.CurrentVersion.targets#L103-L133 -->
   <PropertyGroup>
     <Version>0.1.0</Version>
     <TargetFramework>netstandard2.0</TargetFramework>
@@ -8,9 +12,27 @@
     <LangVersion>latest</LangVersion>
     <RuntimeIdentifier>win-x86</RuntimeIdentifier>
     <IsPublishable>false</IsPublishable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <ModBuildFolder>mod/multiplayer_mvp_client</ModBuildFolder>
+    <!-- Translate from MSBuild Configurations to Rust Profiles -->
+    <NativeBuildProfile Condition="'$(Configuration)'=='Debug'">dev</NativeBuildProfile>
+    <NativeBuildProfile Condition="'$(Configuration)'=='Release'">release</NativeBuildProfile>
+    <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
+    <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
+    <CrossArgs>--profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)</CrossArgs>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ModAssetFiles Include="assets/**/*" />
+    <ModPluginFiles Include="$(TargetPath)" />
+    <!-- The output path for the native assembly must be hardcoded for now, see https://github.com/rust-lang/cargo/issues/6790 -->
+    <ModNativeFiles Include="../../target/$(NativeTargetTriple)/$(Configuration.ToLower())/$(NativeAssemblyName).dll" />
+  </ItemGroup>
 
   <ItemGroup>
     <Reference Include="HOOKS-Assembly-CSharp" HintPath="lib/HOOKS-Assembly-CSharp.dll" />
@@ -20,5 +42,69 @@
     <PackageReference Include="UnityEngine.Modules" Version="2020.3.38" IncludeAssets="compile" /> <!-- The version of Unity shipped with Rain World -->
     <PackageReference Include="MonoMod.Utils" Version="21.11.1.1" /> <!-- The version of MonoMod.Utils shipped with Rain World -->
   </ItemGroup>
+
+  <Target Name="BuildRust">
+    <PropertyGroup>
+      <CBindGenOutputFolder>$(IntermediateOutputPath)cbindgen</CBindGenOutputFolder>
+    </PropertyGroup>
+    <MakeDir Directories="$(CBindGenOutputFolder)" /> <!-- So that Cross doesn't complain when mounting it -->
+    <Exec Command="cross build $(CrossArgs)" EnvironmentVariables="CBINDGEN_OUT_DIR=$(CBindGenOutputFolder)" />
+    <ItemGroup>
+      <NativeHeaderFiles Include="$(CBindGenOutputFolder)/**/*" />
+      <FileWrites Include="$(CBindGenOutputFolder)/**/*" />
+    </ItemGroup>
+  </Target>
+
+  <Target Name="CleanRust">
+    <Exec Command="cross clean $(CrossArgs)" />
+  </Target>
+
+  <Target Name="RunClangSharp">
+    <PropertyGroup>
+      <ClangSharpOutputFolder>$(IntermediateOutputPath)clangsharp</ClangSharpOutputFolder>
+    </PropertyGroup>
+    <RemoveDir Directories="$(ClangSharpOutputFolder)" />
+    <Exec Command="ClangSharpPInvokeGenerator -f @(NativeHeaderFiles) @clangsharp.rsp -o $(ClangSharpOutputFolder)" />
+    <ItemGroup>
+      <Compile Include="$(ClangSharpOutputFolder)/**/*" />
+      <FileWrites Include="$(ClangSharpOutputFolder)/**/*" />
+    </ItemGroup>
+  </Target>
+
+  <!--
+    The files must be written under $(OutDir) for incremental cleaning to work, as files outside that directory get ignored by the clean: https://github.com/dotnet/msbuild/blob/0a0959f86064b7922731df2978b051a744e75072/src/Tasks/Microsoft.Common.CurrentVersion.targets#L5580-L5602
+    To understand Inputs, Outputs and FileWrites, read https://github.com/xamarin/xamarin-android/blob/main/Documentation/guides/MSBuildBestPractices.md#incremental-builds
+  -->
+  <Target Name="BuildModFolder"
+      Inputs="@(ModAssetFiles);@(ModPluginFiles);@(ModNativeFiles)"
+      Outputs="@(ModAssetFiles->'$(OutDir)$(ModBuildFolder)/%(RecursiveDir)%(Filename)%(Extension)');@(ModPluginFiles->'$(OutDir)$(ModBuildFolder)/plugins/%(Filename)%(Extension)');@(ModNativeFiles->'$(OutDir)$(ModBuildFolder)/native/%(Filename)%(Extension)')">
+    <Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/%(RecursiveDir)" />
+    <Copy SourceFiles="@(ModPluginFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/plugins" />
+    <Copy SourceFiles="@(ModNativeFiles)" DestinationFolder="$(OutDir)$(ModBuildFolder)/native" />
+    <ItemGroup>
+      <FileWrites Include="@(ModAssetFiles->'$(OutDir)$(ModBuildFolder)/%(RecursiveDir)%(Filename)%(Extension)');@(ModPluginFiles->'$(OutDir)$(ModBuildFolder)/plugins/%(Filename)%(Extension)');@(ModNativeFiles->'$(OutDir)$(ModBuildFolder)/native/%(Filename)%(Extension)')" />
+    </ItemGroup>
+  </Target>
+
+  <!-- The ____DependsOn properties only work when defined after importing the Sdk targets -->
+  <!-- https://learn.microsoft.com/en-us/visualstudio/msbuild/how-to-extend-the-visual-studio-build-process#override-dependson-properties -->
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk" />
+
+  <PropertyGroup>
+    <BuildDependsOn>
+      BuildRust;
+      RunClangSharp;
+      $(BuildDependsOn)
+    </BuildDependsOn>
+    <!-- https://github.com/dotnet/msbuild/pull/5499 -->
+    <IncrementalCleanDependsOn>
+      BuildModFolder;
+      $(IncrementalCleanDependsOn)
+    </IncrementalCleanDependsOn>
+    <CleanDependsOn>
+      CleanRust;
+      $(CleanDependsOn)
+    </CleanDependsOn>
+  </PropertyGroup>
 
 </Project>

@@ -6,42 +6,49 @@ use std::{
 
 use anyhow::{bail, ensure};
 use bevy::{
-    app::{AppExit, ScheduleRunnerPlugin},
+    app::{AppExit, PluginsState, ScheduleRunnerPlugin},
     ecs::event::ManualEventReader,
     log::Level,
     prelude::*,
 };
-use multiplayer_mvp_net::{AppEndpoint, NoServerVerification};
+use multiplayer_mvp_net::NoServerVerification;
 use quinn::{Connection, Endpoint};
 use tracing_log::LogTracer;
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, EnvFilter, Registry};
 
-#[derive(Debug)]
+#[derive(Debug, Deref, DerefMut)]
 pub struct AppContainer {
+    #[deref]
     pub app: App,
     app_exit_event_reader: ManualEventReader<AppExit>,
 }
 
-impl AppContainer {
-    pub fn new() -> std::io::Result<Self> {
-        let mut app = App::new();
+impl Default for AppContainer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
-        // `create_endpoint` is called inline so that it happens after the `TaskPoolPlugin` has initialised
-        // the default task pools in `add_plugins` (Plugins get eagerly built as soon as they're added).
-        app.add_plugins(MinimalPlugins.build().disable::<ScheduleRunnerPlugin>())
-            .insert_resource(AppEndpoint(create_endpoint()?));
+impl AppContainer {
+    pub fn new() -> Self {
+        info!("AppContainer::new()");
+
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins.build().disable::<ScheduleRunnerPlugin>());
         // .add_systems(Startup, create_endpoint);
 
-        while !app.ready() {
-            bevy::tasks::tick_global_task_pools_on_main_thread();
+        if app.plugins_state() != PluginsState::Cleaned {
+            while app.plugins_state() == PluginsState::Adding {
+                bevy::tasks::tick_global_task_pools_on_main_thread();
+            }
+            app.finish();
+            app.cleanup();
         }
-        app.finish();
-        app.cleanup();
 
-        Ok(Self {
+        Self {
             app,
             app_exit_event_reader: default(),
-        })
+        }
     }
 
     pub fn update(&mut self) -> Option<AppExit> {
@@ -52,7 +59,7 @@ impl AppContainer {
             .get_resource::<Events<AppExit>>()
             .and_then(|app_exit_events| {
                 self.app_exit_event_reader
-                    .iter(app_exit_events)
+                    .read(app_exit_events)
                     .last()
                     .cloned()
             })
@@ -163,7 +170,7 @@ fn create_config() -> quinn::ClientConfig {
     quinn::ClientConfig::new(Arc::new(crypto))
 }
 
-fn create_endpoint() -> std::io::Result<Endpoint> {
+pub fn create_endpoint() -> std::io::Result<Endpoint> {
     let mut endpoint = multiplayer_mvp_net::client(multiplayer_mvp_net::IPV6_WILDCARD)?;
     let config = create_config();
     endpoint.set_default_client_config(config);

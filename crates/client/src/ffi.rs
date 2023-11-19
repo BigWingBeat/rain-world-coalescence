@@ -1,4 +1,7 @@
-use std::mem::ManuallyDrop;
+use std::{
+    mem::ManuallyDrop,
+    ops::{Deref, DerefMut},
+};
 
 use anyhow::anyhow;
 use bevy::{
@@ -8,99 +11,132 @@ use bevy::{
 use multiplayer_mvp_net::AppEndpoint;
 use widestring::{U16CStr, U16CString, Utf16Str};
 
-use crate::app::{configure_logging, AppContainer};
-
-/// The `#[repr(u8)]` functions according to https://github.com/rust-lang/rfcs/blob/master/text/2195-really-tagged-unions.md
-///
-/// The C# type this gets marshalled to is:
-/// ```csharp
-/// [StructLayout(LayoutKind.Explicit)]
-/// struct MarshalledResult
-/// {
-///     enum MarshalledResultTag : byte {
-///         Ok,
-///         Err
-///     }
-///     [FieldOffset(0)]
-///     public MarshalledResultTag tag;
-///     [FieldOffset(x)]
-///     public T OkValue;
-///     [FieldOffset(y)]
-///     public E ErrValue;
-/// }
-/// ```
-/// where `x` and `y` are the correct alignments for the given types `T` and `E`.
-#[repr(u8)]
-pub enum MarshalledResult<T, E> {
-    Ok(T),
-    Err(E),
-}
-
-impl<T, E> From<Result<T, E>> for MarshalledResult<T, E> {
-    fn from(value: Result<T, E>) -> Self {
-        match value {
-            Ok(t) => Self::Ok(t),
-            Err(e) => Self::Err(e),
-        }
-    }
-}
-
-/// An opaque pointer to an error type, suitable for marshalling to C# as an `IntPtr`.
-pub type MarshalledError = anyhow::Error;
+use crate::app::{configure_logging, create_endpoint, AppContainer};
 
 /// A `Box`, but only for `Sized` types, so guranteed to always be 'thin', i.e. always 1 `usize`.
 /// Pointers to unsized types are 'fat', i.e. 2 `usize`s. The second `usize` is for len/vtable/etc.
 /// This is needed because pointers get marshalled to C#'s `IntPtr` type, which is always 1 `usize`.
+/// See https://doc.rust-lang.org/std/boxed/index.html#memory-layout
 #[repr(transparent)]
-pub struct MarshalledBox<T: Sized>(pub Box<T>);
+#[derive(Debug)]
+pub struct ThinBox<T: Sized>(Box<T>);
 
-impl<T> From<Box<T>> for MarshalledBox<T> {
-    fn from(value: Box<T>) -> Self {
-        Self(value)
+impl<T> ThinBox<T> {
+    pub fn new(value: T) -> Self {
+        Self(Box::new(value))
+    }
+
+    pub fn into_raw(b: Self) -> *mut T {
+        Box::into_raw(b.0)
+    }
+
+    /// # Safety
+    ///
+    /// See [`Box::from_raw`]
+    pub unsafe fn from_raw(raw: *mut T) -> Self {
+        Self(Box::from_raw(raw))
+    }
+
+    pub fn into_inner(b: Self) -> T {
+        *b.0
     }
 }
 
-type ConnectionTask = Task<anyhow::Result<()>>;
+impl<T> Deref for ThinBox<T> {
+    type Target = T;
 
-#[no_mangle]
-pub extern "C" fn new_app() -> MarshalledResult<MarshalledBox<AppContainer>, MarshalledError> {
-    AppContainer::new()
-        .map(|app| Box::new(app).into())
-        .map_err(MarshalledError::new)
-        .into()
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
+impl<T> DerefMut for ThinBox<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+pub struct ConnectionTask(Task<anyhow::Result<()>>);
+
 #[no_mangle]
-pub extern "C" fn update_app(app: Option<&mut AppContainer>) -> bool {
-    app.and_then(|app| app.update()).is_some()
+pub extern "C" fn new_app() -> *mut AppContainer {
+    ThinBox::into_raw(ThinBox::new(AppContainer::new()))
+}
+
+/// Returns whether or not the given app requests to exit, or false if the pointer is null
+///
+/// # Safety
+///
+/// The given pointer must be [valid]
+///
+/// [valid]: https://doc.rust-lang.org/std/ptr/index.html#safety
+#[no_mangle]
+pub unsafe extern "C" fn update_app(app: *mut AppContainer) -> bool {
+    if app.is_null() {
+        warn!("Cannot update null app pointer");
+        false
+    } else {
+        (*app).update().is_some()
+    }
+}
+
+#[repr(u8)]
+#[derive(Debug)]
+pub enum AppConnectToServerResult {
+    Ok(*mut ConnectionTask),
+    Err(anyhow::Error),
 }
 
 /// # Safety
 ///
-/// The caller must ensure `address` points to a null-terminated, UTF-16 encoded string
+/// The given pointers must be [valid], and `address` must point to a null-terminated, UTF-16 encoded string
+///
+/// [valid]: https://doc.rust-lang.org/std/ptr/index.html#safety
 #[no_mangle]
 pub unsafe extern "C" fn app_connect_to_server(
-    app: Option<&mut AppContainer>,
+    app: *mut AppContainer,
     address: *const u16,
     port: u16,
-) -> Option<Box<ConnectionTask>> {
-    app.map(|app| {
+) -> AppConnectToServerResult {
+    if app.is_null() {
+        AppConnectToServerResult::Err(anyhow!("Given app pointer is null"))
+    } else {
+        let endpoint = match (*app).world.get_resource::<AppEndpoint>() {
+            Some(AppEndpoint(endpoint)) => endpoint.clone(),
+            None => match create_endpoint() {
+                Ok(endpoint) => {
+                    (*app).insert_resource(AppEndpoint(endpoint.clone()));
+                    endpoint
+                }
+                Err(e) => return AppConnectToServerResult::Err(e.into()),
+            },
+        };
+
         let address = U16CStr::from_ptr_str(address);
         let address = Utf16Str::from_ucstr_unchecked(address);
         let address = address.to_string();
-        let endpoint = app.app.world.resource::<AppEndpoint>().0.clone();
         let task = IoTaskPool::get()
             .spawn(async move { AppContainer::connect_to_server(&endpoint, &address, port).await });
-        Box::new(task)
-    })
+        AppConnectToServerResult::Ok(ThinBox::into_raw(ThinBox::new(ConnectionTask(task))))
+    }
 }
 
+/// # Safety
+///
+/// See [`Box::from_raw`]
 #[no_mangle]
-pub extern "C" fn free_app(_: Option<Box<AppContainer>>) {}
+pub unsafe extern "C" fn drop_app(app: *mut AppContainer) {
+    if !app.is_null() {
+        drop(ThinBox::from_raw(app));
+    }
+}
 
+/// # Safety
+///
+/// The given pointer must be an [`anyhow::Error`]
 #[no_mangle]
-pub extern "C" fn format_error(error: MarshalledError) -> *mut u16 {
-    // FFI values should only be dropped by the corresponding `free_xxx` functions, so use ManuallyDrop to
+pub unsafe extern "C" fn format_error(error: anyhow::Error) -> *mut u16 {
+    // FFI values should only be dropped by the corresponding `drop_xxx` functions, so use ManuallyDrop to
     // avoid dropping the error when we're just formatting it
     let error = ManuallyDrop::new(error);
     let message = format!("{:#}", *error);
@@ -110,34 +146,64 @@ pub extern "C" fn format_error(error: MarshalledError) -> *mut u16 {
     utf16.into_raw()
 }
 
+/// # Safety
+///
+/// The given pointer must be an [`anyhow::Error`]
 #[no_mangle]
-pub extern "C" fn free_error(_: MarshalledError) {}
-
-#[no_mangle]
-pub extern "C" fn poll_connection_task(
-    task: Option<&mut ConnectionTask>,
-) -> MarshalledResult<bool, MarshalledError> {
-    task.ok_or_else(|| anyhow!("Cannot poll a null pointer"))
-        .and_then(|task| {
-            futures_lite::future::block_on(futures_lite::future::poll_once(task))
-                .transpose()
-                .map(|o| o.is_some())
-        })
-        .into()
+pub unsafe extern "C" fn drop_error(error: anyhow::Error) {
+    drop(error);
 }
 
+/// # Safety
+///
+/// See [`U16CString::from_raw`]
 #[no_mangle]
-pub extern "C" fn free_connection_task(task: Option<Box<ConnectionTask>>) {
-    if let Some(task) = task {
-        futures_lite::future::block_on(task.cancel());
+pub unsafe extern "C" fn drop_string(string: *mut u16) {
+    if !string.is_null() {
+        drop(U16CString::from_raw(string));
     }
 }
 
-#[no_mangle]
-pub extern "C" fn default_port() -> u16 {
-    multiplayer_mvp_net::DEFAULT_PORT
+#[repr(u8)]
+#[derive(Debug)]
+pub enum PollConnectionTaskResult {
+    Pending,
+    Ok,
+    Err(anyhow::Error),
 }
 
+/// # Safety
+///
+/// The given pointer must be [valid]
+///
+/// [valid]: https://doc.rust-lang.org/std/ptr/index.html#safety
+#[no_mangle]
+pub unsafe extern "C" fn poll_connection_task(
+    task: *mut ConnectionTask,
+) -> PollConnectionTaskResult {
+    if task.is_null() {
+        PollConnectionTaskResult::Err(anyhow!("Given task pointer is null"))
+    } else {
+        match futures_lite::future::block_on(futures_lite::future::poll_once(&mut (*task).0)) {
+            Some(Ok(())) => PollConnectionTaskResult::Ok,
+            Some(Err(e)) => PollConnectionTaskResult::Err(e),
+            None => PollConnectionTaskResult::Pending,
+        }
+    }
+}
+
+/// # Safety
+///
+/// See [`Box::from_raw`]
+#[no_mangle]
+pub unsafe extern "C" fn drop_connection_task(task: *mut ConnectionTask) {
+    if !task.is_null() {
+        let task = ThinBox::into_inner(ThinBox::from_raw(task));
+        futures_lite::future::block_on(task.0.cancel());
+    }
+}
+
+/// Configures native logging permanently for the whole application. Calling this more than once will panic.
 #[no_mangle]
 pub extern "C" fn configure_native_logging() {
     configure_logging()

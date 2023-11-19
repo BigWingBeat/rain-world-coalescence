@@ -4,7 +4,10 @@ pre-build = [
 ]
 
 [build.env]
+volumes = ["CBINDGEN_OUT_DIR"]
 passthrough = [
+	"CBINDGEN_OUT_DIR",
+	"CARGO_BUILD_RUSTC_WRAPPER=",
 	"CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER=/usr/lib/llvm-10/bin/clang",
 	"CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_RUSTFLAGS=-Clink-arg=-fuse-ld=lld",
 ]

@@ -23,3 +23,6 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 bevy.workspace = true
 quinn.workspace = true
 rustls.workspace = true
+
+[build-dependencies]
+cbindgen = "0.26"

@@ -25,7 +25,7 @@ As a prerequisite to compiling the mod, you need to install a few things:
 - [The Rust language toolchain](https://www.rust-lang.org/tools/install) - for compiling the Rust components
 - And if you're not on Windows, [cross](https://github.com/cross-rs/cross) - for cross-compiling the Rust components
 
-With those installed, you can compile the client by simply running `dotnet build -c Release` in the root folder of the repository. This will compile and build the mod, placing it inside the `artifacts/mod` folder. You can use the compiled client by simply moving the built mod folder into your Rain World mods folder (`Rain World/RainWorld_Data/StreamingAssets/mods`) and enabling it from the in-game Remix menu.
+With those installed, you can compile the client by simply running `dotnet build -c Release` in the `mod/MultiplayerMvpClient` folder. This will compile and build the mod, placing it inside the `artifacts/bin/MultiplayerMvpClient/release_win-x86/mod` folder. You can use the compiled client by simply moving the built mod folder into your Rain World mods folder (`Rain World/RainWorld_Data/StreamingAssets/mods`) and enabling it from the in-game Remix menu.
 
 ### Compiling the server
 

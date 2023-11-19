@@ -12,6 +12,7 @@ version = "0.1.0"
 
 [workspace.dependencies]
 bevy = { git = "https://github.com/Pixelstormer/bevy.git", branch = "fork-main", default-features = false, features = [
+	"async-io",
 	"multi-threaded",
 ] }
 quinn = { version = "0.10", default-features = false, features = [

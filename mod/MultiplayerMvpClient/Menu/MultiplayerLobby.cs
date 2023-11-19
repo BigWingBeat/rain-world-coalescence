@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Menu;
 using Menu.Remix;
 using Menu.Remix.MixedUI;
@@ -7,7 +8,7 @@ using VanillaMenu = Menu.Menu;
 
 namespace MultiplayerMvpClient.Menu
 {
-	public class MultiplayerLobby : VanillaMenu
+	public unsafe class MultiplayerLobby : VanillaMenu
 	{
 		public const string BACK_BUTTON_SIGNAL = "BACK";
 		public const string CONNECT_BUTTON_SIGNAL = "CONNECT";
@@ -22,8 +23,8 @@ namespace MultiplayerMvpClient.Menu
 
 		private HoldButton ConnectButton;
 
-		private IntPtr appHandle = IntPtr.Zero;
-		private IntPtr connectionTaskHandle = IntPtr.Zero;
+		private AppContainer* appHandle = null;
+		private ConnectionTask* connectionTaskHandle = null;
 
 		private bool exiting;
 
@@ -107,7 +108,7 @@ namespace MultiplayerMvpClient.Menu
 				const int upDownOffset = -3;
 				const float serverPortWidth = 75;
 				ServerPort = new(
-					new Configurable<int>(Interop.default_port(), new ConfigAcceptableRange<int>(0, 9999)),
+					new Configurable<int>(Interop.DEFAULT_PORT, new ConfigAcceptableRange<int>(0, 9999)),
 					serverSocketAddressAnchor,
 					serverPortWidth);
 				ServerPort.PosY += upDownOffset;
@@ -127,6 +128,15 @@ namespace MultiplayerMvpClient.Menu
 			}
 
 			manager.musicPlayer?.FadeOutAllSongs(25f);
+		}
+
+		private void DisplayNativeError(Error* error)
+		{
+			ushort* errorPointer = Interop.format_error(error);
+			string errorMessage = Marshal.PtrToStringUni(new(errorPointer));
+			Interop.drop_string(errorPointer);
+			Interop.drop_error(error);
+			DisplayNativeError(errorMessage);
 		}
 
 		private void DisplayNativeError(string text)
@@ -187,41 +197,37 @@ namespace MultiplayerMvpClient.Menu
 
 		public override void RawUpdate(float dt)
 		{
-			if (appHandle != IntPtr.Zero)
+			if (appHandle != null)
 			{
-				bool exitRequested = Interop.update_app(appHandle);
+				bool exitRequested = Convert.ToBoolean(Interop.update_app(appHandle));
 				if (exitRequested)
 				{
 					Plugin.Logger.LogInfo("Native app requested exit");
-					Interop.free_app(appHandle);
-					appHandle = IntPtr.Zero;
-					if (connectionTaskHandle != IntPtr.Zero)
+					Interop.drop_app(appHandle);
+					appHandle = null;
+					if (connectionTaskHandle != null)
 					{
-						Interop.free_connection_task(connectionTaskHandle);
-						connectionTaskHandle = IntPtr.Zero;
+						Interop.drop_connection_task(connectionTaskHandle);
+						connectionTaskHandle = null;
 					}
 				}
 			}
 
-			if (connectionTaskHandle != IntPtr.Zero)
+			if (connectionTaskHandle != null)
 			{
-				var pollResult = Interop.poll_connection_task(connectionTaskHandle);
-				switch (pollResult.tag)
+				PollConnectionTaskResult pollResult;
+				pollResult = Interop.poll_connection_task(connectionTaskHandle);
+				switch (pollResult.Anonymous.tag)
 				{
-					case NativeInterop.PollConnectionTaskResult.PollConnectionTaskResultTag.IsCompleted:
-						if (pollResult.IsCompleted)
-						{
-							Interop.free_connection_task(connectionTaskHandle);
-							connectionTaskHandle = IntPtr.Zero;
-						}
+					case PollConnectionTaskResult.Tag.Ok:
+						Plugin.Logger.LogInfo("Server connection completed successfully");
+						Interop.drop_connection_task(connectionTaskHandle);
+						connectionTaskHandle = null;
 						break;
-					case NativeInterop.PollConnectionTaskResult.PollConnectionTaskResultTag.Error:
-						var error = pollResult.ErrorHandle;
-						string errorMessage = Interop.format_error(error);
-						Interop.free_error(error);
-						Interop.free_connection_task(connectionTaskHandle);
-						connectionTaskHandle = IntPtr.Zero;
-						DisplayNativeError(errorMessage);
+					case PollConnectionTaskResult.Tag.Err:
+						Interop.drop_connection_task(connectionTaskHandle);
+						connectionTaskHandle = null;
+						DisplayNativeError(pollResult.err._0);
 						break;
 				}
 			}
@@ -250,34 +256,39 @@ namespace MultiplayerMvpClient.Menu
 			ushort port = (ushort)ServerPort.valueInt;
 			Plugin.Logger.LogInfo($"Connecting to: {address} on port: {port}");
 
-			var newAppResult = Interop.new_app();
-			switch (newAppResult.tag)
+			if (appHandle != null)
 			{
-				case NativeInterop.NewAppResult.NewAppResultTag.App:
-					appHandle = newAppResult.AppHandle;
-					connectionTaskHandle = Interop.app_connect_to_server(appHandle, address, port);
+				Interop.drop_app(appHandle);
+			}
+			appHandle = Interop.new_app();
+
+			IntPtr addressPointer = Marshal.StringToHGlobalUni(address);
+			AppConnectToServerResult result = Interop.app_connect_to_server(appHandle, (ushort*)addressPointer, port);
+			Marshal.FreeHGlobal(addressPointer);
+
+			switch (result.Anonymous.tag)
+			{
+				case AppConnectToServerResult.Tag.Ok:
+					connectionTaskHandle = result.ok._0;
 					break;
-				case NativeInterop.NewAppResult.NewAppResultTag.Error:
-					var error = newAppResult.ErrorHandle;
-					string errorMessage = Interop.format_error(error);
-					Interop.free_error(error);
-					DisplayNativeError(errorMessage);
+				case AppConnectToServerResult.Tag.Err:
+					DisplayNativeError(result.err._0);
 					break;
 			}
 		}
 
 		private void Disconnect()
 		{
-			if (appHandle != IntPtr.Zero)
+			if (appHandle != null)
 			{
-				Interop.free_app(appHandle);
-				appHandle = IntPtr.Zero;
+				Interop.drop_app(appHandle);
+				appHandle = null;
 			}
 
-			if (connectionTaskHandle != IntPtr.Zero)
+			if (connectionTaskHandle != null)
 			{
-				Interop.free_connection_task(connectionTaskHandle);
-				connectionTaskHandle = IntPtr.Zero;
+				Interop.drop_connection_task(connectionTaskHandle);
+				connectionTaskHandle = null;
 			}
 		}
 

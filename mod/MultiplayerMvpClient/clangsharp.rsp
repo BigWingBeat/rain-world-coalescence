@@ -1,9 +1,7 @@
 --config
 compatible-codegen
-latest-codegen
 multi-file
 windows-types
-exclude-anonymous-field-helpers
 generate-tests-xunit
 generate-doc-includes
 generate-helper-types

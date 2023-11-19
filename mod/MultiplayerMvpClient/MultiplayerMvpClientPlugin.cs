@@ -1,6 +1,8 @@
 ﻿global using MultiplayerMvpClient.NativeInterop;
 global using Plugin = MultiplayerMvpClient.MultiplayerMvpClientPlugin;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Runtime.Versioning;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;

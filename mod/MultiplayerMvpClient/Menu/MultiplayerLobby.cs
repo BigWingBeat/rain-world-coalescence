@@ -217,7 +217,7 @@ namespace MultiplayerMvpClient.Menu
 			{
 				PollConnectionTaskResult pollResult;
 				pollResult = Interop.poll_connection_task(connectionTaskHandle);
-				switch (pollResult.Anonymous.tag)
+				switch (pollResult.tag)
 				{
 					case PollConnectionTaskResult.Tag.Ok:
 						Plugin.Logger.LogInfo("Server connection completed successfully");
@@ -266,7 +266,7 @@ namespace MultiplayerMvpClient.Menu
 			AppConnectToServerResult result = Interop.app_connect_to_server(appHandle, (ushort*)addressPointer, port);
 			Marshal.FreeHGlobal(addressPointer);
 
-			switch (result.Anonymous.tag)
+			switch (result.tag)
 			{
 				case AppConnectToServerResult.Tag.Ok:
 					connectionTaskHandle = result.ok._0;

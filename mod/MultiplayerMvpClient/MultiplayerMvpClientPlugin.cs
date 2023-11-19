@@ -44,6 +44,8 @@ namespace MultiplayerMvpClient
 #pragma warning disable IDE0051, CA1822 // Unity uses reflection to call Awake, for this to work it must not be static
 		private void Awake()
 		{
+			PrintRuntimeInformation();
+
 			try
 			{
 				unsafe { Interop.configure_native_logging(); }
@@ -77,6 +79,33 @@ namespace MultiplayerMvpClient
 				string nativeAssemblyPath = NativeAssemblyPath();
 				mono_dllmap_insert(IntPtr.Zero, NATIVE_ASSEMBLY_NAME, null, nativeAssemblyPath, null);
 				NativeLibraryLoaded = true;
+			}
+		}
+
+		public static void PrintRuntimeInformation()
+		{
+			Logger.LogInfo($"Environment.Version: '{Environment.Version}'");
+			Logger.LogInfo($"RuntimeInformation.FrameworkDescription: '{RuntimeInformation.FrameworkDescription}'");
+
+			var a1 = typeof(object).Assembly;
+			var a2 = Assembly.GetEntryAssembly();
+			var a3 = Assembly.GetExecutingAssembly();
+
+			PrintAssemblyInfo(a1, "typeof(object).Assembly");
+			PrintAssemblyInfo(a2, "Entry Assembly");
+			PrintAssemblyInfo(a3, "Executing Assembly");
+
+			static void PrintAssemblyInfo(Assembly a, string displayName)
+			{
+				var name = a.GetName().Name;
+				var version = a.GetName().Version;
+				var aiv = a.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+				var tfm = a.GetCustomAttribute<TargetFrameworkAttribute>();
+				Logger.LogInfo($"Assembly '{displayName}' simple name: '{name}'");
+				Logger.LogInfo($"Assembly '{displayName}' version: '{version}'");
+				Logger.LogInfo($"Assembly '{displayName}' AssemblyInformationalVersion: '{aiv?.InformationalVersion ?? "<null>"}'");
+				Logger.LogInfo($"Assembly '{displayName}' TargetFramework.FrameworkDisplayName: '{tfm?.FrameworkDisplayName ?? "<null>"}'");
+				Logger.LogInfo($"Assembly '{displayName}' TargetFramework.FrameworkName: '{tfm?.FrameworkName ?? "<null>"}'");
 			}
 		}
 

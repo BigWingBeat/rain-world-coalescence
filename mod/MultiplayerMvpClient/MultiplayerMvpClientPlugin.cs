@@ -50,7 +50,7 @@ namespace MultiplayerMvpClient
 
 			unsafe { Interop.configure_native_logging(); }
 			SetupHooks();
-			MultiplayerLobby.SetupHooks();
+			ServerBrowserMenu.SetupHooks();
 		}
 #pragma warning restore IDE0051, CA1822
 

@@ -2,7 +2,6 @@
 compatible-codegen
 multi-file
 windows-types
-generate-tests-xunit
 generate-doc-includes
 generate-helper-types
 generate-macro-bindings
@@ -16,5 +15,3 @@ multiplayer_mvp_client
 Interop
 --namespace
 MultiplayerMvpClient.NativeInterop
---test-output
-../MultiplayerMvpClient.ClangSharpGeneratedTests

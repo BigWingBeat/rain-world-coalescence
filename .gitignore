@@ -7,9 +7,6 @@
 target/
 Cargo.lock
 
-# ClangSharp
-**/MultiplayerMvpClient.ClangSharpGeneratedTests/*.cs
-
 # dotenv files
 .env
 

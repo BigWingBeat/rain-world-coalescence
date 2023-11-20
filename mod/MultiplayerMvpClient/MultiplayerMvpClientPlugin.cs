@@ -46,15 +46,11 @@ namespace MultiplayerMvpClient
 #pragma warning disable IDE0051, CA1822 // Unity uses reflection to call Awake, for this to work it must not be static
 		private void Awake()
 		{
-			PrintRuntimeInformation();
+			// PrintRuntimeInformation();
 
-			try
-			{
-				unsafe { Interop.configure_native_logging(); }
-				SetupHooks();
-				MultiplayerLobby.SetupHooks();
-			}
-			catch (Exception e) { Logger.LogFatal(e); }
+			unsafe { Interop.configure_native_logging(); }
+			SetupHooks();
+			MultiplayerLobby.SetupHooks();
 		}
 #pragma warning restore IDE0051, CA1822
 
@@ -92,19 +88,22 @@ namespace MultiplayerMvpClient
 			var a1 = typeof(object).Assembly;
 			var a2 = Assembly.GetEntryAssembly();
 			var a3 = Assembly.GetExecutingAssembly();
+			var a4 = typeof(RainWorld).Assembly;
 
 			PrintAssemblyInfo(a1, "typeof(object).Assembly");
 			PrintAssemblyInfo(a2, "Entry Assembly");
 			PrintAssemblyInfo(a3, "Executing Assembly");
+			PrintAssemblyInfo(a4, "typeof(RainWorld).Assembly");
 
 			static void PrintAssemblyInfo(Assembly a, string displayName)
 			{
-				var name = a.GetName().Name;
-				var version = a.GetName().Version;
-				var aiv = a.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-				var tfm = a.GetCustomAttribute<TargetFrameworkAttribute>();
-				Logger.LogInfo($"Assembly '{displayName}' simple name: '{name}'");
-				Logger.LogInfo($"Assembly '{displayName}' version: '{version}'");
+				var name = a?.GetName()?.Name;
+				var version = a?.GetName()?.Version;
+				var aiv = a?.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
+				var tfm = a?.GetCustomAttribute<TargetFrameworkAttribute>();
+				Logger.LogInfo($"Assembly '{displayName}' toString: '{a?.ToString() ?? "<null>"}'");
+				Logger.LogInfo($"Assembly '{displayName}' simple name: '{name ?? "<null>"}'");
+				Logger.LogInfo($"Assembly '{displayName}' version: '{version?.ToString() ?? "<null>"}'");
 				Logger.LogInfo($"Assembly '{displayName}' AssemblyInformationalVersion: '{aiv?.InformationalVersion ?? "<null>"}'");
 				Logger.LogInfo($"Assembly '{displayName}' TargetFramework.FrameworkDisplayName: '{tfm?.FrameworkDisplayName ?? "<null>"}'");
 				Logger.LogInfo($"Assembly '{displayName}' TargetFramework.FrameworkName: '{tfm?.FrameworkName ?? "<null>"}'");

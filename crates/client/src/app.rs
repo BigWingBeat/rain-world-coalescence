@@ -2,6 +2,7 @@ use std::{
     fs::File,
     net::{SocketAddr, ToSocketAddrs},
     sync::Arc,
+    time::Duration,
 };
 
 use anyhow::{bail, ensure};
@@ -103,7 +104,10 @@ impl AppContainer {
                 endpoint: &Endpoint,
                 address: SocketAddr,
             ) -> anyhow::Result<Connection> {
-                let connection = endpoint.connect(address, &address.to_string())?.await?;
+                // The server_name parameter must either be a valid DNS domain name or a valid IpAddr, with the port excluded
+                let connection = endpoint
+                    .connect(address, &address.ip().to_string())?
+                    .await?;
                 Ok(connection)
             }
         }
@@ -124,6 +128,8 @@ impl AppContainer {
         }
 
         send.write_all("Client handshake".as_bytes()).await?;
+
+        async_io::Timer::after(Duration::from_secs(5)).await;
 
         Ok(())
     }

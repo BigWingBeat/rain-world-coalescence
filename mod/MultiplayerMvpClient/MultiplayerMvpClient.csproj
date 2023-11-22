@@ -44,9 +44,6 @@
   </ItemGroup>
 
   <Target Name="BuildRust">
-    <PropertyGroup>
-      <CBindGenOutputFolder>$(IntermediateOutputPath)cbindgen</CBindGenOutputFolder>
-    </PropertyGroup>
     <MakeDir Directories="$(CBindGenOutputFolder)" /> <!-- So that Cross doesn't complain when mounting it -->
     <Exec Command="cross build $(CrossArgs)" EnvironmentVariables="CBINDGEN_OUT_DIR=$(CBindGenOutputFolder)" />
     <ItemGroup>
@@ -60,13 +57,14 @@
   </Target>
 
   <Target Name="RunClangSharp">
-    <PropertyGroup>
-      <ClangSharpOutputFolder>$(IntermediateOutputPath)clangsharp</ClangSharpOutputFolder>
-    </PropertyGroup>
-    <RemoveDir Directories="$(ClangSharpOutputFolder)" />
+    <RemoveDir Directories="$(ClangSharpOutputFolder)" /> <!-- Delete the old bindings before regenerating in case something got renamed/removed -->
     <Exec Command="ClangSharpPInvokeGenerator -f @(NativeHeaderFiles) @clangsharp.rsp -o $(ClangSharpOutputFolder)" />
     <ItemGroup>
-      <Compile Include="$(ClangSharpOutputFolder)/**/*" />
+      <!-- ClangSharp output needs to be specified in the target after it runs, so that clean builds work -->
+      <!-- Glob patterns are eagerly expanded, so if the output is specified outside of a target, it eagerly expands to nothing
+            on clean builds because ClangSharp hasn't ran yet, causing compile errors -->
+      <!-- Specifying ClangSharp's output in a target after it runs is necessary to delay the glob expansion until the files actually exist -->
+      <Compile Include="$(ClangSharpOutputFolder)/**/*" KeepDuplicates="false" />
       <FileWrites Include="$(ClangSharpOutputFolder)/**/*" />
     </ItemGroup>
   </Target>
@@ -106,5 +104,18 @@
       $(CleanDependsOn)
     </CleanDependsOn>
   </PropertyGroup>
+
+  <!-- IntermediateOutputPath is only defined after importing the targets -->
+  <PropertyGroup>
+    <CBindGenOutputFolder>$(IntermediateOutputPath)cbindgen</CBindGenOutputFolder>
+    <ClangSharpOutputFolder>$(IntermediateOutputPath)clangsharp</ClangSharpOutputFolder>
+  </PropertyGroup>
+
+  <!-- ClangSharp output needs to be specified outside of a target so that it gets recognised by language servers -->
+  <!-- Language servers don't evaluate any targets, so if the output is only specified inside a target, they show errors for
+        anything to do with the produced bindings, even if actually `dotnet build`ing works fine -->
+  <ItemGroup>
+    <Compile Include="$(ClangSharpOutputFolder)/**/*" />
+  </ItemGroup>
 
 </Project>

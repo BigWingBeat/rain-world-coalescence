@@ -80,7 +80,7 @@ namespace MultiplayerMvpClient
 			}
 		}
 
-		public static void PrintRuntimeInformation()
+		private static void PrintRuntimeInformation()
 		{
 			Logger.LogInfo($"Environment.Version: '{Environment.Version}'");
 			Logger.LogInfo($"RuntimeInformation.FrameworkDescription: '{RuntimeInformation.FrameworkDescription}'");
@@ -120,4 +120,11 @@ namespace MultiplayerMvpClient
 			unsafe { Interop.terminate_taskpool_threads(); }
 		}
 	}
+}
+
+namespace System.Runtime.CompilerServices
+{
+	// Required for init property accessors and primary constructors to compile
+	// https://learn.microsoft.com/en-us/dotnet/api/system.runtime.compilerservices.isexternalinit
+	public class IsExternalInit;
 }

@@ -1,23 +1,19 @@
 using System.Runtime.InteropServices;
 using Menu;
-using Menu.Remix;
 using Menu.Remix.MixedUI;
-using RWCustom;
 using UnityEngine;
-using VanillaMenu = Menu.Menu;
 
 namespace MultiplayerMvpClient.Menu
 {
 	// The menu used to find and connect to servers. Accessed from the main menu.
 	// Can directly connect to a specified IP/domain + port, and in future will have a steam-integrated server browser
-	public unsafe class ServerBrowserMenu : VanillaMenu
+	public unsafe class ServerBrowserMenu : CustomMenuBase
 	{
-		public const string BACK_BUTTON_SIGNAL = "BACK";
 		public const string CONNECT_BUTTON_SIGNAL = "CONNECT";
 		public const string DISCONNECT_BUTTON_SIGNAL = "DISCONNECT";
 		public const string MAIN_MENU_BUTTON_SIGNAL = "MULTIPLAYER";
 
-		public static readonly ProcessManager.ProcessID ServerBrowserMenuId = new("ServerBrowserMenu", true);
+		public static readonly ProcessManager.ProcessID ProcessId = new(nameof(ServerBrowserMenu), true);
 
 		private OpTextBox ServerIpAddress;
 
@@ -28,66 +24,23 @@ namespace MultiplayerMvpClient.Menu
 		private AppContainer* appHandle = null;
 		private ConnectionTask* connectionTaskHandle = null;
 
-		private bool exiting;
-
-		private bool hasDoneInitUpdate;
-
-		public override bool FreezeMenuFunctions => hasDoneInitUpdate && base.FreezeMenuFunctions;
-
 		public ServerBrowserMenu(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
 		{
-			Vector2 screenSize = manager.rainWorld.screenSize;
-			Vector2 screenCenter = manager.rainWorld.screenSize / 2;
-
-			Vector2 bottomLeft = Vector2.zero;
-			Vector2 topRight = screenSize;
-
-			Vector2 standardButtonSize = new(110f, 30f);
-
-			Page page = new(this, null, "main", 0);
-			pages.Add(page);
-
-			// Background art
-			scene = new InteractiveMenuScene(this, page, ModManager.MMF ? manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU);
-			page.subObjects.Add(scene);
-
-			// Fullscreen translucent tint to dim out the background art
-			FSprite backgroundTint = new("pixel")
-			{
-				color = Color.black,
-				anchorX = 0,
-				anchorY = 0,
-				scaleX = screenSize.x + 2,
-				scaleY = screenSize.y + 2,
-				x = -1,
-				y = -1,
-				alpha = 0.85f
-			};
-			page.Container.AddChild(backgroundTint);
-
-			// Fancy title text
-			MenuIllustration title = new(this, scene, "", "MultiplayerTitle", Vector2.zero, crispPixels: true, anchorCenter: false);
-			title.sprite.shader = manager.rainWorld.Shaders["MenuText"];
-			scene.AddIllustration(title);
-
-			// Return to main menu button
-			SimpleButton backButton = new(this, page, Translate(BACK_BUTTON_SIGNAL), BACK_BUTTON_SIGNAL, new Vector2(200f, 50f), standardButtonSize);
-			page.subObjects.Add(backButton);
-			backObject = backButton;
+			var builder = new CustomMenuBuilder()
+				.WithBackgroundArt(true)
+				.WithTitleIllustration("MultiplayerTitle")
+				.WithStandardBackButton()
+				.WithSong("RW_43 - Bio Engineering");
 
 			// Connect to server button
-			ConnectButton = new(this, page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new(screenCenter.x, screenSize.y * 0.3f), 30);
+			// Starts greyed out as the IP text box starts empty
+			ConnectButton = new(this, null, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenCenter.y * 0.3f), 30);
 			ConnectButton.GetButtonBehavior.greyedOut = true;
-			page.subObjects.Add(ConnectButton);
-
-			// SimpleButton disconnectButton = new(this, page, Translate(DISCONNECT_BUTTON_SIGNAL), DISCONNECT_BUTTON_SIGNAL, new Vector2(500, 280), new Vector2(110, 30));
-			// page.subObjects.Add(disconnectButton);
+			builder.WithMenuObject(ConnectButton);
 
 			// IP address and port number, layed out to be centered
 			{
-				Vector2 serverSocketAddressAnchor = new(screenCenter.x, screenSize.y * 0.6f);
-				MenuTabWrapper tabWrapper = new(this, page);
-				page.subObjects.Add(tabWrapper);
+				Vector2 serverSocketAddressAnchor = new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenSize.y * 0.6f);
 
 				OpLabel serverIpAddressLabel = new(
 					serverSocketAddressAnchor,
@@ -97,6 +50,7 @@ namespace MultiplayerMvpClient.Menu
 
 				float serverIpAddressLabelWidth = serverIpAddressLabel.label.textRect.width;
 
+				// Just large enough to fit a full IPv6 address
 				const float serverIpAddressWidth = 274;
 				ServerIpAddress = new(
 					new Configurable<string>(""),
@@ -131,83 +85,19 @@ namespace MultiplayerMvpClient.Menu
 				serverPortLabel.PosX = ServerIpAddress.PosX + serverIpAddressWidth + padding;
 				ServerPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
 
-				// Actually add the elements to the UI
-				_ = new UIelementWrapper(tabWrapper, serverIpAddressLabel);
-				_ = new UIelementWrapper(tabWrapper, ServerIpAddress);
-				_ = new UIelementWrapper(tabWrapper, serverPortLabel);
-				_ = new UIelementWrapper(tabWrapper, ServerPort);
+				builder.WithMixedUiElement(serverIpAddressLabel)
+					.WithMixedUiElement(ServerIpAddress)
+					.WithMixedUiElement(serverPortLabel)
+					.WithMixedUiElement(ServerPort);
 			}
 
-			// Fade out Sundown from main menu
-			manager.musicPlayer?.FadeOutAllSongs(25f);
-		}
-
-		private string FormatNativeError(Error* error)
-		{
-			ushort* errorPointer = Interop.format_error(error);
-			string errorMessage = Marshal.PtrToStringUni(new(errorPointer));
-			Interop.drop_string(errorPointer);
-			Interop.drop_error(error);
-			return errorMessage;
-		}
-
-		private void DisplayNativeError(string text)
-		{
-			Plugin.Logger.LogInfo($"Native code error: {text}");
-
-			PlaySound(SoundID.MENU_Security_Button_Release);
-
-			// Dialogs automatically disable most UI elements when shown, except for OpTextBox and OpUpDown specifically,
-			// which need to be manually disabled and then reenabled
-			ServerIpAddress.Unassign();
-			ServerPort.Unassign();
-			DialogNotify dialog = new(text, manager, () =>
-			{
-				PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
-				ServerIpAddress.Assign();
-				ServerPort.Assign();
-			});
-			manager.ShowDialog(dialog);
+			builder.Build(this);
 		}
 
 		internal static void SetupHooks()
 		{
-			On.Menu.MainMenu.ctor += AddMainMenuButton;
-			On.ProcessManager.PostSwitchMainProcess += SwitchMainProcess;
-		}
-
-		private static void AddMainMenuButton(On.Menu.MainMenu.orig_ctor orig, MainMenu self, ProcessManager manager, bool showRegionSpecificBkg)
-		{
-			orig(self, manager, showRegionSpecificBkg);
-
-			float buttonWidth = MainMenu.GetButtonWidth(self.CurrLang);
-			Vector2 pos = new(683f - (buttonWidth / 2f), 0f);
-			Vector2 size = new(buttonWidth, 30f);
-			int indexFromBottomOfList = 5;
-			self.AddMainMenuButton(new SimpleButton(self, self.pages[0], self.Translate(MAIN_MENU_BUTTON_SIGNAL), MAIN_MENU_BUTTON_SIGNAL, pos, size), () => MainMenuButtonPressed(self), indexFromBottomOfList);
-		}
-
-		private static void MainMenuButtonPressed(VanillaMenu from)
-		{
-			from.manager.RequestMainProcessSwitch(ServerBrowserMenuId);
-			from.PlaySound(SoundID.MENU_Switch_Page_In);
-		}
-
-		private static void SwitchMainProcess(On.ProcessManager.orig_PostSwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
-		{
-			if (ID == ServerBrowserMenuId)
-			{
-				self.currentMainLoop = new ServerBrowserMenu(self, ID);
-			}
-			orig(self, ID);
-		}
-
-		public override void Init()
-		{
-			base.Init();
-			init = true;
-			Update();
-			hasDoneInitUpdate = true;
+			SetupMainMenuButtonHook(5, ProcessId, MAIN_MENU_BUTTON_SIGNAL);
+			SetupSwitchMainProcessHook(ProcessId, (manager, ID) => new ServerBrowserMenu(manager, ID));
 		}
 
 		public override void RawUpdate(float dt)
@@ -242,29 +132,12 @@ namespace MultiplayerMvpClient.Menu
 					case PollConnectionTaskResult.Tag.Err:
 						Interop.drop_connection_task(connectionTaskHandle);
 						connectionTaskHandle = null;
-						DisplayNativeError(FormatNativeError(pollResult.err._0));
+						DisplayNativeError(InteropUtils.FormatNativeError(pollResult.err._0));
 						break;
 				}
 			}
 
 			base.RawUpdate(dt);
-		}
-
-		public override void Update()
-		{
-			base.Update();
-
-			// Play Bio Engineering on loop
-			if (manager.musicPlayer?.song == null)
-			{
-				manager.musicPlayer?.MenuRequestsSong("RW_43 - Bio Engineering", 1f, 1f);
-			}
-
-			// Exit to main menu when Esc is pressed
-			if (RWInput.CheckPauseButton(0, manager.rainWorld))
-			{
-				ExitToMainMenu();
-			}
 		}
 
 		private void Connect()
@@ -289,7 +162,7 @@ namespace MultiplayerMvpClient.Menu
 					connectionTaskHandle = result.ok._0;
 					break;
 				case AppConnectToServerResult.Tag.Err:
-					DisplayNativeError(FormatNativeError(result.err._0));
+					DisplayNativeError(InteropUtils.FormatNativeError(result.err._0));
 					break;
 			}
 		}
@@ -311,14 +184,10 @@ namespace MultiplayerMvpClient.Menu
 
 		private void ExitToMainMenu()
 		{
-			// Exiting out while a Dialog is up softlocks the game, so don't do that
-			if (!exiting && manager.dialog == null)
+			if (!IsSwitchingMainProcess)
 			{
-				exiting = true;
 				Disconnect();
-				PlaySound(SoundID.MENU_Switch_Page_Out);
-				manager.musicPlayer?.FadeOutAllSongs(100f);
-				manager.RequestMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
+				BackOutMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
 			}
 		}
 

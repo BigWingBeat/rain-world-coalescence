@@ -19,9 +19,6 @@ namespace MultiplayerMvpClient.Menu
 		private record SongConfig(string Name, bool Loop, float Priority, float FadeInTime);
 		private SongConfig? Song;
 
-		private List<MenuObject> MenuObjects = new(0);
-		private List<UIelement> MixedUiElements = new(0);
-
 		public CustomMenuBuilder WithBackgroundArt(bool dimmed, MenuScene.SceneID? sceneId = null)
 		{
 			BackgroundArt = new(dimmed, sceneId);
@@ -46,23 +43,8 @@ namespace MultiplayerMvpClient.Menu
 			return this;
 		}
 
-		public CustomMenuBuilder WithMenuObject(MenuObject menuObject)
+		public void Build(CustomMenuBase menu, Page page)
 		{
-			MenuObjects.Add(menuObject);
-			return this;
-		}
-
-		public CustomMenuBuilder WithMixedUiElement(UIelement element)
-		{
-			MixedUiElements.Add(element);
-			return this;
-		}
-
-		public void Build(CustomMenuBase menu)
-		{
-			Page page = new(menu, null, "main", 0);
-			menu.pages.Add(page);
-
 			if (BackgroundArt != null)
 			{
 				InteractiveMenuScene scene = new(menu, page, BackgroundArt.SceneId ?? (ModManager.MMF ? menu.manager.rainWorld.options.subBackground : MenuScene.SceneID.Landscape_SU));
@@ -102,16 +84,15 @@ namespace MultiplayerMvpClient.Menu
 				menu.backObject = backButton;
 			}
 
-			foreach (MenuObject menuObject in MenuObjects)
+			foreach (MenuObject menuObject in menu.YieldMenuObjects())
 			{
-				menuObject.owner = page;
 				page.subObjects.Add(menuObject);
 			}
 
 			MenuTabWrapper tabWrapper = new(menu, page);
 			page.subObjects.Add(tabWrapper);
 
-			foreach (UIelement element in MixedUiElements)
+			foreach (UIelement element in menu.YieldMixedUiElements())
 			{
 				if (element is ICanBeTyped typeable)
 				{

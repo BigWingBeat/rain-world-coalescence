@@ -1,5 +1,4 @@
 using Menu;
-using Menu.Remix;
 using Menu.Remix.MixedUI;
 using UnityEngine;
 using VanillaMenu = Menu.Menu;
@@ -29,7 +28,7 @@ namespace MultiplayerMvpClient.Menu
 		// Affects at least OpTextBox & OpUpDown, possibly others as well
 		public override bool FreezeMenuFunctions => HasDoneInitUpdate && base.FreezeMenuFunctions;
 
-		public CustomMenuBase(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
+		protected CustomMenuBase(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
 		{
 			Typeables = new(0);
 			ScreenDimensions = new(manager);
@@ -73,6 +72,10 @@ namespace MultiplayerMvpClient.Menu
 				}, indexFromBottomOfList);
 			};
 		}
+
+		public abstract IEnumerable<MenuObject> YieldMenuObjects();
+
+		public abstract IEnumerable<UIelement> YieldMixedUiElements();
 
 		public override void Init()
 		{

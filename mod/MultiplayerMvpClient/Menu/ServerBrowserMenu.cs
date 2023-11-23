@@ -7,7 +7,7 @@ namespace MultiplayerMvpClient.Menu
 {
 	// The menu used to find and connect to servers. Accessed from the main menu.
 	// Can directly connect to a specified IP/domain + port, and in future will have a steam-integrated server browser
-	public unsafe class ServerBrowserMenu : CustomMenuBase
+	public unsafe class ServerBrowserMenu : SinglePageMenu
 	{
 		public const string CONNECT_BUTTON_SIGNAL = "CONNECT";
 		public const string DISCONNECT_BUTTON_SIGNAL = "DISCONNECT";
@@ -24,74 +24,79 @@ namespace MultiplayerMvpClient.Menu
 		private AppContainer* appHandle = null;
 		private ConnectionTask* connectionTaskHandle = null;
 
+#pragma warning disable CS8618 // The fields get assigned to in the yield methods, which are called by the builder
 		public ServerBrowserMenu(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
 		{
-			var builder = new CustomMenuBuilder()
+			new CustomMenuBuilder()
 				.WithBackgroundArt(true)
 				.WithTitleIllustration("MultiplayerTitle")
 				.WithStandardBackButton()
-				.WithSong("RW_43 - Bio Engineering");
+				.WithSong("RW_43 - Bio Engineering")
+				.Build(this, Page);
+		}
+#pragma warning restore CS8618
 
+		public override IEnumerable<MenuObject> YieldMenuObjects()
+		{
 			// Connect to server button
 			// Starts greyed out as the IP text box starts empty
-			ConnectButton = new(this, null, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenCenter.y * 0.3f), 30);
+			ConnectButton = new(this, Page, Translate(CONNECT_BUTTON_SIGNAL), CONNECT_BUTTON_SIGNAL, new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenSize.y * 0.3f), 30);
 			ConnectButton.GetButtonBehavior.greyedOut = true;
-			builder.WithMenuObject(ConnectButton);
+			yield return ConnectButton;
+		}
 
+		public override IEnumerable<UIelement> YieldMixedUiElements()
+		{
 			// IP address and port number, layed out to be centered
-			{
-				Vector2 serverSocketAddressAnchor = new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenSize.y * 0.6f);
+			Vector2 serverSocketAddressAnchor = new(ScreenDimensions.ScreenCenter.x, ScreenDimensions.ScreenSize.y * 0.6f);
 
-				OpLabel serverIpAddressLabel = new(
-					serverSocketAddressAnchor,
-					new(20, 24),
-					Translate("Server Address:"),
-					FLabelAlignment.Left);
+			OpLabel serverIpAddressLabel = new(
+				serverSocketAddressAnchor,
+				new(20, 24),
+				Translate("Server Address:"),
+				FLabelAlignment.Left);
 
-				float serverIpAddressLabelWidth = serverIpAddressLabel.label.textRect.width;
+			float serverIpAddressLabelWidth = serverIpAddressLabel.label.textRect.width;
 
-				// Just large enough to fit a full IPv6 address
-				const float serverIpAddressWidth = 274;
-				ServerIpAddress = new(
-					new Configurable<string>(""),
-					serverSocketAddressAnchor,
-					 serverIpAddressWidth);
+			// Just large enough to fit a full IPv6 address
+			const float serverIpAddressWidth = 274;
+			ServerIpAddress = new(
+				new Configurable<string>(""),
+				serverSocketAddressAnchor,
+				 serverIpAddressWidth);
 
-				// Disable connect button when the IP address textbox is empty
-				ServerIpAddress.OnValueUpdate += (_, value, _) => ConnectButton.GetButtonBehavior.greyedOut = string.IsNullOrEmpty(value);
+			// Disable connect button when the IP address textbox is empty
+			ServerIpAddress.OnValueUpdate += (_, value, _) => ConnectButton.GetButtonBehavior.greyedOut = string.IsNullOrEmpty(value);
 
-				OpLabel serverPortLabel = new(
-					serverSocketAddressAnchor,
-					 new(20, 24),
-					  Translate("Port:"),
-					  FLabelAlignment.Left);
+			OpLabel serverPortLabel = new(
+				serverSocketAddressAnchor,
+				 new(20, 24),
+				  Translate("Port:"),
+				  FLabelAlignment.Left);
 
-				float serverPortLabelWidth = serverPortLabel.label.textRect.width;
+			float serverPortLabelWidth = serverPortLabel.label.textRect.width;
 
-				const int upDownOffset = -3;
-				const float serverPortWidth = 75;
-				ServerPort = new(
-					new Configurable<int>(Interop.DEFAULT_PORT, new ConfigAcceptableRange<int>(0, 9999)),
-					serverSocketAddressAnchor,
-					serverPortWidth);
-				ServerPort.PosY += upDownOffset;
+			const int upDownOffset = -3;
+			const float serverPortWidth = 75;
+			ServerPort = new(
+				new Configurable<int>(Interop.DEFAULT_PORT, new ConfigAcceptableRange<int>(0, 9999)),
+				serverSocketAddressAnchor,
+				serverPortWidth);
+			ServerPort.PosY += upDownOffset;
 
-				const float padding = 10;
-				float totalWidth = serverIpAddressLabelWidth + padding + serverIpAddressWidth + padding + serverPortLabelWidth + padding + serverPortWidth;
+			const float padding = 10;
+			float totalWidth = serverIpAddressLabelWidth + padding + serverIpAddressWidth + padding + serverPortLabelWidth + padding + serverPortWidth;
 
-				// Lay out the elements relative to eachother so they're centered
-				serverIpAddressLabel.PosX = serverSocketAddressAnchor.x - (totalWidth / 2);
-				ServerIpAddress.PosX = serverIpAddressLabel.PosX + serverIpAddressLabelWidth + padding;
-				serverPortLabel.PosX = ServerIpAddress.PosX + serverIpAddressWidth + padding;
-				ServerPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
+			// Lay out the elements relative to eachother so they're centered
+			serverIpAddressLabel.PosX = serverSocketAddressAnchor.x - (totalWidth / 2);
+			ServerIpAddress.PosX = serverIpAddressLabel.PosX + serverIpAddressLabelWidth + padding;
+			serverPortLabel.PosX = ServerIpAddress.PosX + serverIpAddressWidth + padding;
+			ServerPort.PosX = serverPortLabel.PosX + serverPortLabelWidth + padding;
 
-				builder.WithMixedUiElement(serverIpAddressLabel)
-					.WithMixedUiElement(ServerIpAddress)
-					.WithMixedUiElement(serverPortLabel)
-					.WithMixedUiElement(ServerPort);
-			}
-
-			builder.Build(this);
+			yield return serverIpAddressLabel;
+			yield return ServerIpAddress;
+			yield return serverPortLabel;
+			yield return ServerPort;
 		}
 
 		internal static void SetupHooks()

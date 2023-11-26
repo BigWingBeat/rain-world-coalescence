@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Menu;
 using Menu.Remix.MixedUI;
@@ -10,10 +11,13 @@ namespace MultiplayerMvpClient.Menu
 	public unsafe class ServerBrowserMenu : SinglePageMenu
 	{
 		public const string CONNECT_BUTTON_SIGNAL = "CONNECT";
-		public const string DISCONNECT_BUTTON_SIGNAL = "DISCONNECT";
 		public const string MAIN_MENU_BUTTON_SIGNAL = "MULTIPLAYER";
 
 		public static readonly ProcessManager.ProcessID ProcessId = new(nameof(ServerBrowserMenu), true);
+
+#pragma warning disable CS8618 // Gets assigned to in instance constructor
+		private static ServerBrowserMenu Instance;
+#pragma warning restore
 
 		private OpTextBox ServerIpAddress;
 
@@ -21,12 +25,19 @@ namespace MultiplayerMvpClient.Menu
 
 		private HoldButton ConnectButton;
 
-		private AppContainer* appHandle = null;
-		private ConnectionTask* connectionTaskHandle = null;
+		private SafeAppHandle? appHandle;
+
+		private ClientProfile Profile;
+
+		private bool WaitingForConnection;
+
+		public override bool FreezeMenuFunctions => WaitingForConnection || base.FreezeMenuFunctions;
 
 #pragma warning disable CS8618 // The fields get assigned to in the yield methods, which are called by the builder
 		public ServerBrowserMenu(ProcessManager manager, ProcessManager.ProcessID ID) : base(manager, ID)
 		{
+			Instance = this;
+			Profile = new();
 			new CustomMenuBuilder()
 				.WithBackgroundArt(true)
 				.WithTitleIllustration("MultiplayerTitle")
@@ -105,44 +116,50 @@ namespace MultiplayerMvpClient.Menu
 			SetupSwitchMainProcessHook(ProcessId, (manager, ID) => new ServerBrowserMenu(manager, ID));
 		}
 
+		public override void Update()
+		{
+			base.Update();
+			if (WaitingForConnection)
+			{
+				infoLabelFade = 1;
+			}
+		}
+
 		public override void RawUpdate(float dt)
 		{
-			if (appHandle != null)
+			if (appHandle != null && !appHandle.IsInvalid && !appHandle.IsClosed)
 			{
-				bool exitRequested = Convert.ToBoolean(Interop.update_app(appHandle));
+				bool exitRequested = appHandle.Update();
 				if (exitRequested)
 				{
 					Plugin.Logger.LogInfo("Native app requested exit");
-					Interop.drop_app(appHandle);
+					appHandle.Close();
 					appHandle = null;
-					if (connectionTaskHandle != null)
-					{
-						Interop.drop_connection_task(connectionTaskHandle);
-						connectionTaskHandle = null;
-					}
-				}
-			}
-
-			if (connectionTaskHandle != null)
-			{
-				PollConnectionTaskResult pollResult;
-				pollResult = Interop.poll_connection_task(connectionTaskHandle);
-				switch (pollResult.tag)
-				{
-					case PollConnectionTaskResult.Tag.Ok:
-						Plugin.Logger.LogInfo("Server connection completed successfully");
-						Interop.drop_connection_task(connectionTaskHandle);
-						connectionTaskHandle = null;
-						break;
-					case PollConnectionTaskResult.Tag.Err:
-						Interop.drop_connection_task(connectionTaskHandle);
-						connectionTaskHandle = null;
-						DisplayNativeError(InteropUtils.FormatNativeError(pollResult.err._0));
-						break;
 				}
 			}
 
 			base.RawUpdate(dt);
+		}
+
+		public override string UpdateInfoText()
+		{
+			if (WaitingForConnection)
+			{
+				return "Connecting...";
+			}
+			else
+			{
+				return base.UpdateInfoText();
+			}
+		}
+
+		public override void CommunicateWithUpcomingProcess(MainLoopProcess nextProcess)
+		{
+			base.CommunicateWithUpcomingProcess(nextProcess);
+			if (nextProcess is ServerLobbyMenu lobby)
+			{
+				lobby.CommunicateWithPreviousProcess(appHandle, Profile);
+			}
 		}
 
 		private void Connect()
@@ -151,20 +168,25 @@ namespace MultiplayerMvpClient.Menu
 			ushort port = (ushort)ServerPort.valueInt;
 			Plugin.Logger.LogInfo($"Connecting to: {address} on port: {port}");
 
-			if (appHandle != null)
+			if (appHandle == null || appHandle.IsInvalid || appHandle.IsClosed)
 			{
-				Interop.drop_app(appHandle);
+				appHandle = new(Interop.new_app());
 			}
-			appHandle = Interop.new_app();
 
-			IntPtr addressPointer = Marshal.StringToHGlobalUni(address);
-			AppConnectToServerResult result = Interop.app_connect_to_server(appHandle, (ushort*)addressPointer, port);
-			Marshal.FreeHGlobal(addressPointer);
+			AppConnectToServerResult result = appHandle.ConnectToServer(address, port, Profile.Username, &ConnectedToServerCallback, &NativeErrorCallback);
 
 			switch (result.tag)
 			{
 				case AppConnectToServerResult.Tag.Ok:
-					connectionTaskHandle = result.ok._0;
+					WaitingForConnection = true;
+					DisableTypeables();
+					infoLabel.text = UpdateInfoText();
+					break;
+				case AppConnectToServerResult.Tag.AppPointerIsNull:
+					DisplayNativeError("appHandle is null");
+					break;
+				case AppConnectToServerResult.Tag.AddressPointerIsNull:
+					DisplayNativeError("addressPointer is null");
 					break;
 				case AppConnectToServerResult.Tag.Err:
 					DisplayNativeError(InteropUtils.FormatNativeError(result.err._0));
@@ -172,27 +194,31 @@ namespace MultiplayerMvpClient.Menu
 			}
 		}
 
-		private void Disconnect()
+		[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+		private static void ConnectedToServerCallback()
 		{
-			if (appHandle != null)
-			{
-				Interop.drop_app(appHandle);
-				appHandle = null;
-			}
+			Instance.PlaySound(SoundID.MENU_Start_New_Game);
+			Instance.manager.musicPlayer?.FadeOutAllSongs(100f);
+			Instance.SwitchMainProcess(ServerLobbyMenu.ProcessId);
+		}
 
-			if (connectionTaskHandle != null)
-			{
-				Interop.drop_connection_task(connectionTaskHandle);
-				connectionTaskHandle = null;
-			}
+		[UnmanagedCallersOnly(CallConvs = [typeof(CallConvCdecl)])]
+		private static void NativeErrorCallback(Error* error)
+		{
+			Instance.WaitingForConnection = false;
+			Instance.infoLabel.text = Instance.UpdateInfoText();
+			Instance.DisplayNativeError(InteropUtils.FormatNativeError(error));
 		}
 
 		private void ExitToMainMenu()
 		{
-			if (!IsSwitchingMainProcess)
+			if (!IsSwitchingMainProcess && !WaitingForConnection)
 			{
-				Disconnect();
-				BackOutMainProcessSwitch(ProcessManager.ProcessID.MainMenu);
+				appHandle?.Close();
+				appHandle = null;
+				PlaySound(SoundID.MENU_Switch_Page_Out);
+				manager.musicPlayer?.FadeOutAllSongs(100f);
+				SwitchMainProcess(ProcessManager.ProcessID.MainMenu);
 			}
 		}
 
@@ -202,10 +228,6 @@ namespace MultiplayerMvpClient.Menu
 			{
 				case CONNECT_BUTTON_SIGNAL:
 					Connect();
-					break;
-				case DISCONNECT_BUTTON_SIGNAL:
-					PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
-					Disconnect();
 					break;
 				case BACK_BUTTON_SIGNAL:
 					ExitToMainMenu();

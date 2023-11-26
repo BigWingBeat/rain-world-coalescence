@@ -9,7 +9,9 @@ use runtime::BevyTasksRuntime;
 use rustls::client::{ServerCertVerified, ServerCertVerifier};
 use serde::{Deserialize, Serialize};
 
+pub mod receive_stream_driver;
 pub mod runtime;
+pub mod send_stream_driver;
 
 pub const DEFAULT_PORT: u16 = 7110;
 

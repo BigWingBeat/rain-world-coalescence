@@ -20,7 +20,7 @@ namespace MultiplayerMvpClient.Menu
 		public record SongConfig(string Name, float Priority, float FadeInTime);
 		public SongConfig? Song;
 
-		public bool IsSwitchingMainProcess { get; protected set; }
+		public bool IsSwitchingMainProcess { get; private set; }
 
 		private bool HasDoneInitUpdate;
 
@@ -96,21 +96,35 @@ namespace MultiplayerMvpClient.Menu
 			}
 
 			// Pressing Esc acts like clicking the back button
-			if (backObject != null && RWInput.CheckPauseButton(0, manager.rainWorld))
+			if (backObject is SimpleButton backButton && RWInput.CheckPauseButton(0, manager.rainWorld))
 			{
-				Singal(backObject, BACK_BUTTON_SIGNAL);
+				Singal(backObject, backButton.signalText);
 			}
 		}
 
-		protected void BackOutMainProcessSwitch(ProcessManager.ProcessID id)
+		protected virtual void SwitchMainProcess(ProcessManager.ProcessID id)
 		{
 			// Switching main process while a Dialog is up softlocks the game, so don't do that
 			if (manager.dialog == null)
 			{
 				IsSwitchingMainProcess = true;
-				PlaySound(SoundID.MENU_Switch_Page_Out);
-				manager.musicPlayer?.FadeOutAllSongs(100f);
 				manager.RequestMainProcessSwitch(id);
+			}
+		}
+
+		protected void DisableTypeables()
+		{
+			foreach (ICanBeTyped typeable in Typeables)
+			{
+				typeable.Unassign();
+			}
+		}
+
+		protected void EnableTypeables()
+		{
+			foreach (ICanBeTyped typeable in Typeables)
+			{
+				typeable.Assign();
 			}
 		}
 
@@ -123,17 +137,11 @@ namespace MultiplayerMvpClient.Menu
 			// Dialogs automatically disable most UI elements when shown, except for the typing aspects of ICanBeTyped implementors
 			// These instead need to be manually disabled and reenabled when the dialog is shown and dismissed respectively
 			// ICanBeTyped is implemented by OpComboBox, OpListBox, OpResourceList, OpResourceSelector, OpTextBox and OpUpdown
-			foreach (ICanBeTyped typeable in Typeables)
-			{
-				typeable.Unassign();
-			}
+			DisableTypeables();
 			DialogNotify dialog = new(text, manager, () =>
 			{
 				PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
-				foreach (ICanBeTyped typeable in Typeables)
-				{
-					typeable.Assign();
-				}
+				EnableTypeables();
 			});
 			manager.ShowDialog(dialog);
 		}

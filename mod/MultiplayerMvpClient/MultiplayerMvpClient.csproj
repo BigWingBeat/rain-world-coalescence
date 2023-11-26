@@ -37,6 +37,7 @@
   <ItemGroup>
     <Reference Include="HOOKS-Assembly-CSharp" HintPath="lib/HOOKS-Assembly-CSharp.dll" />
     <Reference Include="PUBLIC-Assembly-CSharp" HintPath="lib/PUBLIC-Assembly-CSharp.dll" />
+    <Reference Include="Steamworks.NET" HintPath="lib/Steamworks.NET.dll" />
     <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
     <PackageReference Include="BepInEx.Core" Version="5.4.17" /> <!-- The version of BepInEx shipped with Rain World -->
     <PackageReference Include="UnityEngine.Modules" Version="2020.3.38" IncludeAssets="compile" /> <!-- The version of Unity shipped with Rain World -->
@@ -57,14 +58,18 @@
   </Target>
 
   <Target Name="RunClangSharp">
-    <RemoveDir Directories="$(ClangSharpOutputFolder)" /> <!-- Delete the old bindings before regenerating in case something got renamed/removed -->
+    <!-- Delete the old bindings before regenerating in case something got renamed/removed, as they would be stale -->
+    <ItemGroup>
+      <Compile Remove="$(ClangSharpOutputFolder)/**/*" />
+    </ItemGroup>
+    <RemoveDir Directories="$(ClangSharpOutputFolder)" />
     <Exec Command="ClangSharpPInvokeGenerator -f @(NativeHeaderFiles) @clangsharp.rsp -o $(ClangSharpOutputFolder)" />
     <ItemGroup>
       <!-- ClangSharp output needs to be specified in the target after it runs, so that clean builds work -->
       <!-- Glob patterns are eagerly expanded, so if the output is specified outside of a target, it eagerly expands to nothing
             on clean builds because ClangSharp hasn't ran yet, causing compile errors -->
       <!-- Specifying ClangSharp's output in a target after it runs is necessary to delay the glob expansion until the files actually exist -->
-      <Compile Include="$(ClangSharpOutputFolder)/**/*" KeepDuplicates="false" />
+      <Compile Include="$(ClangSharpOutputFolder)/**/*" />
       <FileWrites Include="$(ClangSharpOutputFolder)/**/*" />
     </ItemGroup>
   </Target>

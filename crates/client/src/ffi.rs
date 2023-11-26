@@ -6,12 +6,11 @@ use std::{
 use anyhow::anyhow;
 use bevy::{
     prelude::*,
-    tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool, Task},
+    tasks::{AsyncComputeTaskPool, ComputeTaskPool, IoTaskPool},
 };
-use multiplayer_mvp_net::AppEndpoint;
 use widestring::{U16CStr, U16CString, Utf16Str};
 
-use crate::app::{configure_logging, create_endpoint, AppContainer};
+use crate::app::{configure_logging, AppContainer};
 
 /// A `Box`, but only for `Sized` types, so guranteed to always be 'thin', i.e. always 1 `usize`.
 /// Pointers to unsized types are 'fat', i.e. 2 `usize`s. The second `usize` is for len/vtable/etc.
@@ -56,8 +55,6 @@ impl<T> DerefMut for ThinBox<T> {
     }
 }
 
-pub struct ConnectionTask(Task<anyhow::Result<()>>);
-
 #[no_mangle]
 pub extern "C" fn new_app() -> *mut AppContainer {
     ThinBox::into_raw(ThinBox::new(AppContainer::new()))
@@ -83,13 +80,15 @@ pub unsafe extern "C" fn update_app(app: *mut AppContainer) -> bool {
 #[repr(u8)]
 #[derive(Debug)]
 pub enum AppConnectToServerResult {
-    Ok(*mut ConnectionTask),
+    Ok,
+    AppPointerIsNull,
+    AddressPointerIsNull,
     Err(anyhow::Error),
 }
 
 /// # Safety
 ///
-/// The given pointers must be [valid], and `address` must point to a null-terminated, UTF-16 encoded string
+/// The given pointers must be [valid], and `address` & `username` must point to null-terminated, UTF-16 encoded strings
 ///
 /// [valid]: https://doc.rust-lang.org/std/ptr/index.html#safety
 #[no_mangle]
@@ -97,27 +96,25 @@ pub unsafe extern "C" fn app_connect_to_server(
     app: *mut AppContainer,
     address: *const u16,
     port: u16,
+    username: *const u16,
+    async_ok_handler: extern "C" fn(),
+    async_error_handler: extern "C" fn(anyhow::Error),
 ) -> AppConnectToServerResult {
     if app.is_null() {
-        AppConnectToServerResult::Err(anyhow!("Given app pointer is null"))
+        AppConnectToServerResult::AppPointerIsNull
+    } else if address.is_null() {
+        AppConnectToServerResult::AddressPointerIsNull
     } else {
-        let endpoint = match (*app).world.get_resource::<AppEndpoint>() {
-            Some(AppEndpoint(endpoint)) => endpoint.clone(),
-            None => match create_endpoint() {
-                Ok(endpoint) => {
-                    (*app).insert_resource(AppEndpoint(endpoint.clone()));
-                    endpoint
-                }
-                Err(e) => return AppConnectToServerResult::Err(e.into()),
-            },
-        };
-
-        let address = U16CStr::from_ptr_str(address);
-        let address = Utf16Str::from_ucstr_unchecked(address);
-        let address = address.to_string();
-        let task = IoTaskPool::get()
-            .spawn(async move { AppContainer::connect_to_server(&endpoint, &address, port).await });
-        AppConnectToServerResult::Ok(ThinBox::into_raw(ThinBox::new(ConnectionTask(task))))
+        match (*app).connect_to_server(
+            &marshal_string(address),
+            port,
+            marshal_string(username),
+            async_ok_handler,
+            async_error_handler,
+        ) {
+            Ok(_) => AppConnectToServerResult::Ok,
+            Err(e) => AppConnectToServerResult::Err(anyhow!(e)),
+        }
     }
 }
 
@@ -156,50 +153,20 @@ pub unsafe extern "C" fn drop_error(error: anyhow::Error) {
 
 /// # Safety
 ///
+/// The given pointer must be valid, and must point to a null-terminated, UTF-16 encoded string
+unsafe fn marshal_string(string: *const u16) -> String {
+    let string = U16CStr::from_ptr_str(string);
+    let string = Utf16Str::from_ucstr_unchecked(string);
+    string.to_string()
+}
+
+/// # Safety
+///
 /// See [`U16CString::from_raw`]
 #[no_mangle]
 pub unsafe extern "C" fn drop_string(string: *mut u16) {
     if !string.is_null() {
         drop(U16CString::from_raw(string));
-    }
-}
-
-#[repr(u8)]
-#[derive(Debug)]
-pub enum PollConnectionTaskResult {
-    Pending,
-    Ok,
-    Err(anyhow::Error),
-}
-
-/// # Safety
-///
-/// The given pointer must be [valid]
-///
-/// [valid]: https://doc.rust-lang.org/std/ptr/index.html#safety
-#[no_mangle]
-pub unsafe extern "C" fn poll_connection_task(
-    task: *mut ConnectionTask,
-) -> PollConnectionTaskResult {
-    if task.is_null() {
-        PollConnectionTaskResult::Err(anyhow!("Given task pointer is null"))
-    } else {
-        match futures_lite::future::block_on(futures_lite::future::poll_once(&mut (*task).0)) {
-            Some(Ok(())) => PollConnectionTaskResult::Ok,
-            Some(Err(e)) => PollConnectionTaskResult::Err(e),
-            None => PollConnectionTaskResult::Pending,
-        }
-    }
-}
-
-/// # Safety
-///
-/// See [`Box::from_raw`]
-#[no_mangle]
-pub unsafe extern "C" fn drop_connection_task(task: *mut ConnectionTask) {
-    if !task.is_null() {
-        let task = ThinBox::into_inner(ThinBox::from_raw(task));
-        futures_lite::future::block_on(task.0.cancel());
     }
 }
 

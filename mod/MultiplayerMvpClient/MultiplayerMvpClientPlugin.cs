@@ -51,6 +51,7 @@ namespace MultiplayerMvpClient
 			unsafe { Interop.configure_native_logging(); }
 			SetupHooks();
 			ServerBrowserMenu.SetupHooks();
+			ServerLobbyMenu.SetupHooks();
 		}
 #pragma warning restore IDE0051, CA1822
 
@@ -127,4 +128,15 @@ namespace System.Runtime.CompilerServices
 	// Required for init property accessors and primary constructors to compile
 	// https://learn.microsoft.com/en-us/dotnet/api/system.runtime.compilerservices.isexternalinit
 	public class IsExternalInit;
+}
+
+namespace System.Runtime.InteropServices
+{
+	// https://learn.microsoft.com/en-us/dotnet/api/system.runtime.interopservices.unmanagedcallersonlyattribute
+	[AttributeUsage(AttributeTargets.Method, Inherited = false)]
+	public class UnmanagedCallersOnlyAttribute : Attribute
+	{
+		public Type[]? CallConvs;
+		public string? EntryPoint;
+	}
 }

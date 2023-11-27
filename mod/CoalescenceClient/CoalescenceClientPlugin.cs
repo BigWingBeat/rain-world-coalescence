@@ -150,7 +150,6 @@ namespace System.Runtime.CompilerServices
 	/// Required for init property accessors and primary constructors to compile
 	/// <see href="https://learn.microsoft.com/en-us/dotnet/api/system.runtime.compilerservices.isexternalinit">(MSDN)</see>
 	/// </summary>
-	/// <seealso href="" />
 	public class IsExternalInit;
 }
 

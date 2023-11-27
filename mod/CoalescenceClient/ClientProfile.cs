@@ -1,4 +1,4 @@
-namespace MultiplayerMvpClient
+namespace CoalescenceClient
 {
 	public class ClientProfile
 	{

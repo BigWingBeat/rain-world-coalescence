@@ -10,8 +10,8 @@ generate-unmanaged-constants
 --headerFile
 clangsharp-bindings-header.txt
 --libraryPath
-multiplayer_mvp_client
+coalescence_client
 --methodClassName
 Interop
 --namespace
-MultiplayerMvpClient.NativeInterop
+CoalescenceClient.NativeInterop

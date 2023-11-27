@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace MultiplayerMvpClient.Menu
+namespace CoalescenceClient.Menu
 {
 	public readonly struct ScreenDimensions
 	{

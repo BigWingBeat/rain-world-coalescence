@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace MultiplayerMvpClient.NativeInterop
+namespace CoalescenceClient.NativeInterop
 {
 	public class SafeAppHandle : SafeHandle
 	{

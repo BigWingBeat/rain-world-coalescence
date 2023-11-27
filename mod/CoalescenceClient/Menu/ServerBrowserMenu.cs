@@ -4,7 +4,7 @@ using Menu;
 using Menu.Remix.MixedUI;
 using UnityEngine;
 
-namespace MultiplayerMvpClient.Menu
+namespace CoalescenceClient.Menu
 {
 	/// <summary>
 	/// The menu used to find and connect to servers. Accessed from the game's main menu.

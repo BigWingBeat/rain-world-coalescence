@@ -16,4 +16,4 @@ The mod uses authoritative replication with rollback and client-server (i.e. sta
 
 ## Useful links
 - [This summary](https://github.com/bevyengine/bevy/discussions/8675) of the above networking terminology
-- [Why use QUIC instead of UDP?](https://github.com/Henauxg/bevy_quinnet#quic-as-a-game-networking-protocol)
+- [Why use QUIC?](https://github.com/Henauxg/bevy_quinnet#quic-as-a-game-networking-protocol)

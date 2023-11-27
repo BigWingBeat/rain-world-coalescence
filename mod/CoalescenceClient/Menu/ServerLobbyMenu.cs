@@ -2,7 +2,7 @@ using Menu;
 using Menu.Remix.MixedUI;
 using UnityEngine;
 
-namespace MultiplayerMvpClient.Menu
+namespace CoalescenceClient.Menu
 {
 	public unsafe class ServerLobbyMenu : SinglePageMenu
 	{

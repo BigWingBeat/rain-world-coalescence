@@ -16,5 +16,5 @@ after_includes = "\nstruct Error;"
 
 [parse]
 parse_deps = true
-include = ["multiplayer_mvp_net"]
-extra_bindings = ["multiplayer_mvp_net"]
+include = ["coalescence_common"]
+extra_bindings = ["coalescence_common"]

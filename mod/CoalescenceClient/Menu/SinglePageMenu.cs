@@ -1,6 +1,6 @@
 using Menu;
 
-namespace MultiplayerMvpClient.Menu
+namespace CoalescenceClient.Menu
 {
 	public abstract class SinglePageMenu : CustomMenuBase
 	{

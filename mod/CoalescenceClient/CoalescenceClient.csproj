@@ -18,12 +18,12 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <ModBuildFolder>mod/multiplayer_mvp_client</ModBuildFolder>
+    <ModBuildFolder>mod/coalescence_client</ModBuildFolder>
     <!-- Translate from MSBuild Configurations to Rust Profiles -->
     <NativeBuildProfile Condition="'$(Configuration)'=='Debug'">dev</NativeBuildProfile>
     <NativeBuildProfile Condition="'$(Configuration)'=='Release'">release</NativeBuildProfile>
     <NativeTargetTriple>i686-pc-windows-gnu</NativeTargetTriple>
-    <NativeAssemblyName>multiplayer_mvp_client</NativeAssemblyName>
+    <NativeAssemblyName>coalescence_client</NativeAssemblyName>
     <CrossArgs>--profile $(NativeBuildProfile) --target $(NativeTargetTriple) --package $(NativeAssemblyName)</CrossArgs>
   </PropertyGroup>
 

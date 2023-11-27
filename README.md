@@ -1,6 +1,6 @@
-# Rain World Multiplayer MVP (aka Coalescence)
+# Rain World Coalescence
 
-This mod is an MVP (Minimum Viable Product) to demonstrate 'real' (Not via Parsec/Steam Remote Play etc.) online multiplayer for Rain World.
+This mod is currently an MVP (Minimum Viable Product) to demonstrate 'real' (Not via Parsec/Steam Remote Play etc.) online multiplayer for Rain World.
 
 As an MVP, the scope of the mod is currently limited exclusively to the Sandbox and Competitive arena modes.
 
@@ -25,7 +25,7 @@ As a prerequisite to compiling the mod, you need to install a few things:
 - [The Rust language toolchain](https://www.rust-lang.org/tools/install) - for compiling the Rust components
 - And if you're not on Windows, [cross](https://github.com/cross-rs/cross) - for cross-compiling the Rust components
 
-With those installed, you can compile the client by simply running `dotnet build -c Release` in the `mod/MultiplayerMvpClient` folder. This will compile and build the mod, placing it inside the `artifacts/bin/MultiplayerMvpClient/release_win-x86/mod` folder. You can use the compiled client by simply moving the built mod folder into your Rain World mods folder (`Rain World/RainWorld_Data/StreamingAssets/mods`) and enabling it from the in-game Remix menu.
+With those installed, you can compile the client by simply running `dotnet build -c Release` in the `mod/CoalescenceClient` folder. This will compile and build the mod, placing it inside the `artifacts/bin/CoalescenceClient/release_win-x86/mod` folder. You can use the compiled client by simply moving the built mod folder into your Rain World mods folder (`Rain World/RainWorld_Data/StreamingAssets/mods`) and enabling it from the in-game Remix menu.
 
 ### Compiling the server
 
@@ -33,4 +33,4 @@ The prerequisites for compiling the server are a subset of those for the client,
 
 - [The Rust language toolchain](https://www.rust-lang.org/tools/install) - the server is written in pure Rust
 
-To compile the server, you just need to run `cargo build --release --package multiplayer_mvp_server` in the root folder of the repository. The compiled server binary will be located somewhere in the `target` folder.
+To compile the server, you just need to run `cargo build --release --package coalescence_server` in the root folder of the repository. The compiled server binary will be located somewhere in the `target` folder.

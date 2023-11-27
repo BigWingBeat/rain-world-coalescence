@@ -1,6 +1,6 @@
 using System.Security;
 
-namespace MultiplayerMvpClient.NativeInterop
+namespace CoalescenceClient.NativeInterop
 {
 	[SuppressUnmanagedCodeSecurity]
 	public static unsafe partial class Interop { }

@@ -1,10 +1,10 @@
 use std::{borrow::Cow, time::Duration};
 
 use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, tasks::IoTaskPool};
-use crossbeam::channel::{Receiver, Sender};
-use multiplayer_mvp_net::{
+use coalescence_common::{
     receive_stream_driver::ReceiveStreamDriver, send_stream_driver::SendStreamDriver, AppEndpoint,
 };
+use crossbeam::channel::{Receiver, Sender};
 use quinn::{Connecting, Connection, Endpoint, ServerConfig};
 use rcgen::RcgenError;
 use rustls::{Certificate, PrivateKey};
@@ -65,9 +65,9 @@ fn create_endpoint() -> anyhow::Result<Endpoint> {
     // let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
     // transport_config.max_concurrent_uni_streams(0_u8.into());
 
-    let endpoint = multiplayer_mvp_net::server(
+    let endpoint = coalescence_common::server(
         server_config,
-        multiplayer_mvp_net::IPV6_WILDCARD_DEFAULT_PORT,
+        coalescence_common::IPV6_WILDCARD_DEFAULT_PORT,
     )?;
 
     Ok(endpoint)

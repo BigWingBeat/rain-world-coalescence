@@ -1,5 +1,5 @@
 [package]
-name = "multiplayer_mvp_server"
+name = "coalescence_server"
 description = "Dedicated server binary"
 authors.workspace = true
 edition.workspace = true
@@ -9,7 +9,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-multiplayer_mvp_net = { path = "../net" }
+coalescence_common = { path = "../coalescence_common" }
 bevy.workspace = true
 quinn.workspace = true
 rustls.workspace = true

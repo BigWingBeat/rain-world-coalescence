@@ -1,31 +1,31 @@
-﻿global using MultiplayerMvpClient.NativeInterop;
-global using Plugin = MultiplayerMvpClient.MultiplayerMvpClientPlugin;
+﻿global using CoalescenceClient.NativeInterop;
+global using Plugin = CoalescenceClient.CoalescenceClientPlugin;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Security.Permissions;
 using BepInEx;
 using BepInEx.Logging;
-using MultiplayerMvpClient.Menu;
+using CoalescenceClient.Menu;
 using UnityEngine;
 
 #pragma warning disable CS0618 // SecurityAction.RequestMinimum is obsolete. However, this does not apply to the mod, which still needs it. Suppress the warning indicating that it is obsolete.
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 #pragma warning restore CS0618
 
-namespace MultiplayerMvpClient
+namespace CoalescenceClient
 {
 	[BepInPlugin(PLUGIN_GUID, PLUGIN_NAME, PLUGIN_VERSION)]
-	public class MultiplayerMvpClientPlugin : BaseUnityPlugin
+	public class CoalescenceClientPlugin : BaseUnityPlugin
 	{
 		public const string PLUGIN_GUID = "pixelstorm.coalescence.client";
-		public const string PLUGIN_NAME = "Multiplayer MVP Client";
+		public const string PLUGIN_NAME = "Coalescence Client";
 		public const string PLUGIN_VERSION = "0.1.0";
 
 		/// <summary>
 		/// The identifier used by the DllImports
 		/// </summary>
-		public const string NATIVE_ASSEMBLY_NAME = "multiplayer_mvp_client";
+		public const string NATIVE_ASSEMBLY_NAME = "coalescence_client";
 
 		private static bool NativeLibraryLoaded = false;
 
@@ -43,7 +43,7 @@ namespace MultiplayerMvpClient
 		[DllImport("__Internal", CharSet = CharSet.Ansi, ExactSpelling = true)]
 		private static extern void mono_dllmap_insert(IntPtr assembly, string dll, string? func, string tdll, string? tfunc);
 
-		private MultiplayerMvpClientPlugin() : base()
+		private CoalescenceClientPlugin() : base()
 		{
 			Instance ??= this;
 			Logger ??= base.Logger;

@@ -3,7 +3,7 @@ using Menu.Remix.MixedUI;
 using UnityEngine;
 using VanillaMenu = Menu.Menu;
 
-namespace MultiplayerMvpClient.Menu
+namespace CoalescenceClient.Menu
 {
 	public abstract class CustomMenuBase : VanillaMenu
 	{

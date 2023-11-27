@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace MultiplayerMvpClient.NativeInterop
+namespace CoalescenceClient.NativeInterop
 {
 	public unsafe static class InteropUtils
 	{

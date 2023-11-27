@@ -1,5 +1,5 @@
 [package]
-name = "multiplayer_mvp_client"
+name = "coalescence_client"
 description = "Native library used by the C# mod"
 authors.workspace = true
 edition.workspace = true
@@ -12,7 +12,7 @@ version.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-multiplayer_mvp_net = { path = "../net" }
+coalescence_common = { path = "../coalescence_common" }
 anyhow = "1.0"
 thiserror = "1.0"
 bytes = "1.5"

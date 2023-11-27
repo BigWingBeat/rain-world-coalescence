@@ -13,11 +13,11 @@ use bevy::{
     prelude::*,
     tasks::{block_on, IoTaskPool, Task},
 };
-use futures_lite::future::poll_once;
-use multiplayer_mvp_net::{
+use coalescence_common::{
     receive_stream_driver::ReceiveStreamDriver, send_stream_driver::SendStreamDriver, AppEndpoint,
     NoServerVerification,
 };
+use futures_lite::future::poll_once;
 use quinn::{ConnectError, Connection, ConnectionError, Endpoint};
 use thiserror::Error;
 use tracing_log::LogTracer;
@@ -299,7 +299,7 @@ fn create_config() -> quinn::ClientConfig {
 }
 
 pub fn create_endpoint() -> std::io::Result<Endpoint> {
-    let mut endpoint = multiplayer_mvp_net::client(multiplayer_mvp_net::IPV6_WILDCARD)?;
+    let mut endpoint = coalescence_common::client(coalescence_common::IPV6_WILDCARD)?;
     let config = create_config();
     endpoint.set_default_client_config(config);
     Ok(endpoint)

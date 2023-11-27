@@ -6,7 +6,10 @@ namespace MultiplayerMvpClient.NativeInterop
 	{
 		public SafeAppHandle() : base(IntPtr.Zero, true) { }
 
-		public unsafe SafeAppHandle(AppContainer* appHandle) : base((IntPtr)appHandle, true) { }
+		public unsafe SafeAppHandle(AppContainer* appHandle) : this()
+		{
+			SetHandle((IntPtr)appHandle);
+		}
 
 		private unsafe AppContainer* AppHandle => (AppContainer*)handle;
 
@@ -22,7 +25,10 @@ namespace MultiplayerMvpClient.NativeInterop
 			return true;
 		}
 
-		// Returns whether or not the app requested to exit
+		/// <summary>
+		/// Runs <see href="https://docs.rs/bevy/latest/bevy/app/struct.App.html#method.update">App::update</see> once
+		/// </summary>
+		/// <returns>Whether or not the app requested to exit this update</returns>
 		public bool Update()
 		{
 			unsafe
@@ -31,6 +37,15 @@ namespace MultiplayerMvpClient.NativeInterop
 			}
 		}
 
+		/// <summary>
+		/// Attempts to connect to a server
+		/// </summary>
+		/// <param name="address">The IP address or DNS name of the server</param>
+		/// <param name="port">The port to connect to</param>
+		/// <param name="username">This client's username</param>
+		/// <param name="asyncOkHandler">Callback if the connection succeeded</param>
+		/// <param name="asyncErrorHandler">Callback if the connection failed</param>
+		/// <returns>Synchronous errors are returned directly, async errors invoke the <paramref name="asyncErrorHandler"/></returns>
 		public unsafe AppConnectToServerResult ConnectToServer(string address, ushort port, string username, delegate* unmanaged[Cdecl]<void> asyncOkHandler, delegate* unmanaged[Cdecl]<Error*, void> asyncErrorHandler)
 		{
 			IntPtr addressPointer = Marshal.StringToHGlobalUni(address);

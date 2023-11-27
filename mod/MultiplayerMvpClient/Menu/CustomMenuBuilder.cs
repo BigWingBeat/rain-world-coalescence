@@ -99,6 +99,7 @@ namespace MultiplayerMvpClient.Menu
 					menu.Typeables.Add(typeable);
 				}
 
+				// Required to actually add the UIelements to the menu
 				_ = new UIelementWrapper(tabWrapper, element);
 			}
 

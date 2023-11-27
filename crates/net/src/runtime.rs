@@ -10,6 +10,8 @@ use async_io::Async;
 use bevy::tasks::IoTaskPool;
 use quinn::{udp, AsyncTimer, AsyncUdpSocket, Runtime};
 
+// Mostly copied from Quinn's async-std runtime impl
+
 #[derive(Debug)]
 pub struct BevyTasksRuntime;
 

@@ -6,8 +6,11 @@ using UnityEngine;
 
 namespace MultiplayerMvpClient.Menu
 {
-	// The menu used to find and connect to servers. Accessed from the main menu.
-	// Can directly connect to a specified IP/domain + port, and in future will have a steam-integrated server browser
+	/// <summary>
+	/// The menu used to find and connect to servers. Accessed from the game's main menu.
+	///
+	/// Can directly connect to a specified IP/DNS name and port, and in future will have a steam-integrated server browser
+	/// </summary>
 	public unsafe class ServerBrowserMenu : SinglePageMenu
 	{
 		public const string CONNECT_BUTTON_SIGNAL = "CONNECT";
@@ -69,7 +72,7 @@ namespace MultiplayerMvpClient.Menu
 
 			float serverIpAddressLabelWidth = serverIpAddressLabel.label.textRect.width;
 
-			// Just large enough to fit a full IPv6 address
+			// Just wide enough to fit a full IPv6 address
 			const float serverIpAddressWidth = 274;
 			ServerIpAddress = new(
 				new Configurable<string>(""),
@@ -119,6 +122,8 @@ namespace MultiplayerMvpClient.Menu
 		public override void Update()
 		{
 			base.Update();
+
+			// Prevent the "Connecting..." text from fading out
 			if (WaitingForConnection)
 			{
 				infoLabelFade = 1;

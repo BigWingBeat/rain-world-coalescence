@@ -2,7 +2,6 @@ use std::{
     fs::File,
     io,
     net::{SocketAddr, ToSocketAddrs},
-    sync::Arc,
 };
 
 use anyhow::anyhow;
@@ -13,12 +12,14 @@ use bevy::{
     prelude::*,
     tasks::{block_on, IoTaskPool, Task},
 };
-use coalescence_common::{
-    receive_stream_driver::ReceiveStreamDriver, send_stream_driver::SendStreamDriver, AppEndpoint,
-    NoServerVerification,
+use coalescence_quinn::{
+    client::create_endpoint,
+    quinn::{ConnectError, Connection, ConnectionError, Endpoint},
+    receive_stream_driver::ReceiveStreamDriver,
+    send_stream_driver::SendStreamDriver,
+    AppEndpoint,
 };
 use futures_lite::future::poll_once;
-use quinn::{ConnectError, Connection, ConnectionError, Endpoint};
 use thiserror::Error;
 use tracing_log::LogTracer;
 use tracing_subscriber::{prelude::__tracing_subscriber_SubscriberExt, EnvFilter, Registry};
@@ -282,25 +283,4 @@ pub fn configure_logging() {
         );
         old_handler(infos);
     }));
-}
-
-fn create_config() -> quinn::ClientConfig {
-    // Exactly the same as `with_safe_defaults()` but with TLS 1.2 disabled (Quic requires TLS 1.3)
-    let mut crypto = rustls::ClientConfig::builder()
-        .with_safe_default_cipher_suites()
-        .with_safe_default_kx_groups()
-        .with_protocol_versions(&[&rustls::version::TLS13])
-        .unwrap()
-        .with_custom_certificate_verifier(Arc::new(NoServerVerification))
-        .with_no_client_auth();
-    crypto.enable_early_data = true;
-
-    quinn::ClientConfig::new(Arc::new(crypto))
-}
-
-pub fn create_endpoint() -> std::io::Result<Endpoint> {
-    let mut endpoint = coalescence_common::client(coalescence_common::IPV6_WILDCARD)?;
-    let config = create_config();
-    endpoint.set_default_client_config(config);
-    Ok(endpoint)
 }

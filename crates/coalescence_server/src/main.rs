@@ -1,13 +1,14 @@
 use std::{borrow::Cow, time::Duration};
 
 use bevy::{app::ScheduleRunnerPlugin, log::LogPlugin, prelude::*, tasks::IoTaskPool};
-use coalescence_common::{
-    receive_stream_driver::ReceiveStreamDriver, send_stream_driver::SendStreamDriver, AppEndpoint,
+use coalescence_quinn::{
+    quinn::{Connecting, Connection, Endpoint},
+    receive_stream_driver::ReceiveStreamDriver,
+    send_stream_driver::SendStreamDriver,
+    server::create_endpoint,
+    AppEndpoint,
 };
 use crossbeam::channel::{Receiver, Sender};
-use quinn::{Connecting, Connection, Endpoint, ServerConfig};
-use rcgen::RcgenError;
-use rustls::{Certificate, PrivateKey};
 
 #[derive(Debug, Default)]
 enum ClientHandshakeState {
@@ -46,31 +47,6 @@ fn main() {
             (poll_new_client_connections, drive_send_streams, handshake),
         )
         .run();
-}
-
-fn generate_certificate(
-    alt_names: impl Into<Vec<String>>,
-) -> Result<(Certificate, PrivateKey), RcgenError> {
-    let certificate = rcgen::generate_simple_self_signed(alt_names)?;
-    Ok((
-        Certificate(certificate.serialize_der()?),
-        PrivateKey(certificate.serialize_private_key_der()),
-    ))
-}
-
-fn create_endpoint() -> anyhow::Result<Endpoint> {
-    let (certificate, private_key) = generate_certificate(vec!["::1".into()])?;
-
-    let server_config = ServerConfig::with_single_cert(vec![certificate], private_key)?;
-    // let transport_config = Arc::get_mut(&mut server_config.transport).unwrap();
-    // transport_config.max_concurrent_uni_streams(0_u8.into());
-
-    let endpoint = coalescence_common::server(
-        server_config,
-        coalescence_common::IPV6_WILDCARD_DEFAULT_PORT,
-    )?;
-
-    Ok(endpoint)
 }
 
 fn start_listening(mut commands: Commands) {

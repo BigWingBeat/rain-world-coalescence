@@ -11,6 +11,6 @@ version.workspace = true
 [dependencies]
 coalescence_common = { path = "../coalescence_common" }
 coalescence_quinn = { path = "../coalescence_quinn" }
-bevy.workspace = true
 anyhow = "1.0"
 crossbeam = "0.8"
+bevy.workspace = true

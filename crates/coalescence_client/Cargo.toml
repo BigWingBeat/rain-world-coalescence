@@ -16,13 +16,13 @@ coalescence_common = { path = "../coalescence_common" }
 coalescence_quinn = { path = "../coalescence_quinn" }
 anyhow = "1.0"
 thiserror = "1.0"
-async-io = "1.13"
-futures-lite = { version = "1.13", default-features = false }
 widestring = "1.0"
 tracing = { version = "0.1", default-features = false, features = ["std"] }
 tracing-log = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "registry"] }
 tracing-error = "0.2"
+async-io.workspace = true
+futures-lite.workspace = true
 bytes.workspace = true
 bevy.workspace = true
 

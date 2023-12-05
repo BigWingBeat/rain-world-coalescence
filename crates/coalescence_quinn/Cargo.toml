@@ -11,10 +11,10 @@ version.workspace = true
 [dependencies]
 coalescence_proto = { path = "../coalescence_proto" }
 thiserror = "1.0"
-async-io = "1.13"
-futures-lite = { version = "1.13", default-features = false }
 quinn = { version = "0.10", default-features = false, features = ["native-certs", "tls-rustls", "log"] }
 rustls = { version = "0.21", default-features = false, features = ["logging", "dangerous_configuration"] }
 rcgen = "0.11"
+async-io.workspace = true
+futures-lite.workspace = true
 bevy.workspace = true
 bytes.workspace = true

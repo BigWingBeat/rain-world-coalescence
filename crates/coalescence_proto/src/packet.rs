@@ -94,8 +94,8 @@ impl<'a> IntoPacket<LobbyPacket<'a>, Server> for PlayerJoined<'a> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlayerLeft;
 
-impl IntoPacket<LobbyPacket<'static>, Server> for PlayerLeft {
-    fn into_packet(self) -> LobbyPacket<'static> {
+impl<'a> IntoPacket<LobbyPacket<'a>, Server> for PlayerLeft {
+    fn into_packet(self) -> LobbyPacket<'a> {
         LobbyPacket::PlayerLeft(self)
     }
 }

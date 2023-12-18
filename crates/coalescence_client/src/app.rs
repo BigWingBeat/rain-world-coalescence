@@ -160,10 +160,10 @@ impl AppContainer {
                 // `SocketAddr` implements `Ord` such that IPv4 addresses get sorted before IPv6 addresses, so we sort the
                 // given addresses and then iterate over them in reverse, meaning IPv6 addresses get prioritised.
                 addresses.sort_unstable();
-                for (i, &address) in addresses.iter().rev().enumerate() {
+                for (i, &socket_address) in addresses.iter().rev().enumerate() {
                     info!("Trying to connect to address #{}: '{address}'...", i + 1);
 
-                    match try_connect(&endpoint, address).await {
+                    match try_connect(&endpoint, socket_address, address).await {
                         Ok(c) => {
                             connection = Some(c);
                             break;
@@ -172,14 +172,13 @@ impl AppContainer {
                     };
 
                     // Use a local function for the `?` syntax, as `try` blocks are unstable
+                    // The server_name parameter must either be a valid DNS domain name or a valid IpAddr, with the port excluded
                     async fn try_connect(
                         endpoint: &Endpoint,
                         address: SocketAddr,
+                        server_name: &str,
                     ) -> Result<Connection, ConnectToServerError> {
-                        // The server_name parameter must either be a valid DNS domain name or a valid IpAddr, with the port excluded
-                        Ok(endpoint
-                            .connect(address, &address.ip().to_string())?
-                            .await?)
+                        Ok(endpoint.connect(address, server_name)?.await?)
                     }
                 }
 

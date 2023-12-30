@@ -70,10 +70,9 @@ impl<P> Connection<P> {
 
 impl<P: Peer> Connection<P> {
     /// Send the specified packet to the peer
-    pub fn handle_send<T, S>(&mut self, packet: T) -> Result<(), Error>
+    pub fn handle_send<T>(&mut self, packet: T) -> Result<(), Error>
     where
-        T: Packet<S, P>,
-        S: PacketSet + Serialize + 'static,
+        T: Packet<P>,
     {
         let packet = packet.into_set();
         let bytes = serialize(&packet, self.state())?;
@@ -115,7 +114,7 @@ impl<P: Peer> Connection<P> {
     /// If an error was encountered while receiving a packet, returns Err(_) and discards the packet
     pub fn poll_receive<T>(&mut self) -> Result<Option<T>, Error>
     where
-        T: PacketSet + DeserializeOwned + 'static,
+        T: PacketSet,
     {
         let packet_length = match self.pending_receive_len.take() {
             Some(packet_length) => packet_length,

@@ -1,7 +1,7 @@
 //! The different types of packets that correspond to each of the different [`state`]s that the connection can be in
 
 use enumset::EnumSetType;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use strum::EnumDiscriminants;
 
 use crate::{
@@ -9,18 +9,21 @@ use crate::{
     peer::{Client, Server},
 };
 
-/// A type that can represent any of the packet types associated with a certain connection state
-pub trait PacketSet {}
+/// A type that can represent any of a number of different packet types, and is suitable for being serialized and deserialized
+pub trait PacketSet: Serialize + DeserializeOwned + 'static {}
 
-/// A packet type that is included in the packet set `T`
+/// A packet type that can be converted to a specified packet set
 ///
 /// The generic type parameter `P` is the [`Peer`] on which this packet type can be serialized and transmitted (i.e. is "outbound")
-pub trait Packet<T, P> {
+pub trait Packet<P> {
+    /// The packet set that this packet is included in
+    type Set: PacketSet;
+
     /// The channel which this packet should be sent over
     const CHANNEL: Channel;
 
     /// Convert this packet into its associated packet set
-    fn into_set(self) -> T;
+    fn into_set(self) -> Self::Set;
 }
 
 /// The packets that needs to be exchanged between the client and server while establishing the connection
@@ -40,7 +43,8 @@ pub struct Profile {
     pub username: String,
 }
 
-impl Packet<HandshakePacket, Client> for Profile {
+impl Packet<Client> for Profile {
+    type Set = HandshakePacket;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> HandshakePacket {
@@ -54,7 +58,8 @@ pub struct Lobby {
     pub usernames: Vec<String>,
 }
 
-impl Packet<HandshakePacket, Server> for Lobby {
+impl Packet<Server> for Lobby {
+    type Set = HandshakePacket;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> HandshakePacket {
@@ -77,7 +82,8 @@ pub struct PlayerJoined {
     pub username: String,
 }
 
-impl Packet<LobbyPacket, Server> for PlayerJoined {
+impl Packet<Server> for PlayerJoined {
+    type Set = LobbyPacket;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> LobbyPacket {
@@ -88,7 +94,8 @@ impl Packet<LobbyPacket, Server> for PlayerJoined {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlayerLeft;
 
-impl Packet<LobbyPacket, Server> for PlayerLeft {
+impl Packet<Server> for PlayerLeft {
+    type Set = LobbyPacket;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> LobbyPacket {

@@ -31,7 +31,7 @@ pub(crate) type CodecError = <Codec as SerdeCodec>::Error;
 
 use crate::{state::ConnectionState, Error, ErrorKind};
 
-trait SerdeCodec {
+pub(crate) trait SerdeCodec {
     type Error: std::error::Error;
 
     fn encode<T: Serialize + ?Sized>(data: &T) -> Result<Vec<u8>, Self::Error>;
@@ -51,8 +51,8 @@ where
 {
     let encoded_size = Codec::encoded_size(data)?;
     let mut buffer = Vec::with_capacity(encoded_size + length_prefix_size() + 1);
-    buffer.extend_from_slice(&(encoded_size as u16).to_le_bytes());
-    buffer.push(state.into());
+    let [size_0, size_1] = (encoded_size as u16).to_le_bytes();
+    buffer.extend_from_slice(&[size_0, size_1, state.into()]);
     Codec::encode_into(&mut buffer, data)?;
     buffer.shrink_to_fit();
     Ok(buffer)
@@ -66,19 +66,18 @@ pub fn serialize_into<T, W: Write>(
 where
     T: Serialize + ?Sized,
 {
-    let encoded_size = Codec::encoded_size(data)? as u16;
-    into.write_all(&encoded_size.to_le_bytes())?;
-    into.write(&[state.into()])?;
+    let encoded_size = Codec::encoded_size(data)?;
+    let [size_0, size_1] = (encoded_size as u16).to_le_bytes();
+    into.write_all(&[size_0, size_1, state.into()])?;
     Codec::encode_into(into, data)?;
     Ok(())
-
-    // serialize_impl(into, data, Codec::encoded_size(data)?).map_err(|e| Error(ErrorKind::Serde(e)))
 }
 
 pub fn serialized_size<T>(data: &T) -> Result<usize, Error>
 where
     T: Serialize + ?Sized,
 {
+    // Account for prefixing the length and state data to the encoded packet data for framing
     Codec::encoded_size(data)
         .map(|size| size + length_prefix_size() + 1)
         .map_err(Into::into)

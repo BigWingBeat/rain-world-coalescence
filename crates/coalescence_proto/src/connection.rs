@@ -1,4 +1,4 @@
-use std::{any::Any, io::Read, marker::PhantomData};
+use std::{io::Read, marker::PhantomData};
 
 use ::serde::{de::DeserializeOwned, Serialize};
 use bytes::Bytes;
@@ -7,8 +7,8 @@ use crate::{
     packet::{Packet, PacketSet},
     peer::Peer,
     serde::{deserialize_length_prefix, deserialize_packet_from, length_prefix_size, serialize},
-    state::{ConnectionState, ConnectionStateImpl, ConnectionStateObject, HandshakeState},
-    Error, ErrorKind,
+    state::{ConnectionState, ConnectionStateObject},
+    Error,
 };
 
 use self::byte_queue::ByteQueue;
@@ -54,7 +54,7 @@ impl<P> Default for Connection<P> {
 impl<P> Connection<P> {
     pub fn new() -> Self {
         Self {
-            state: Box::<HandshakeState>::default(),
+            state: crate::state::default_state(),
             queued_state_change: None,
             send_queue: Vec::new(),
             receive_queue: ByteQueue::new(),
@@ -73,31 +73,26 @@ impl<P: Peer> Connection<P> {
     pub fn handle_send<T, S>(&mut self, packet: T) -> Result<(), Error>
     where
         T: Packet<S, P>,
-        S: PacketSet + Serialize,
+        S: PacketSet + Serialize + 'static,
     {
-        let state: Box<dyn Any> = self.state;
-        let state = state
-            .downcast::<S::State>()
-            .map_err(|_| ErrorKind::WrongState {
-                expected: S::State::STATE,
-                actual: self.state(),
-            })?;
-
         let packet = packet.into_set();
-        let bytes = serialize(&packet, S::State::STATE)?.into();
+        let bytes = serialize(&packet, self.state())?;
+
+        // Do state handling after serialization so it doesn't happen if serialization errored
+        self.state.handle_packet_serialize(&packet)?;
+        if let Some(new_state) = self.state.poll_state_change() {
+            self.queued_state_change = Some(new_state.state());
+            self.state = new_state
+        }
+
+        // Only actually push the bytes to be transmitted if nothing errored
         if !bytes.is_empty() {
             self.send_queue.push(Transmit {
-                bytes,
+                bytes: bytes.into(),
                 channel: T::CHANNEL,
             });
         }
 
-        // Do state handling as the last thing in the function so it only happens if there weren't any errors
-        state.handle_packet_serialize(&packet);
-        if let Some(new_state) = state.poll_state_change() {
-            self.queued_state_change = Some(new_state.state());
-            self.state = new_state
-        }
         Ok(())
     }
 
@@ -120,16 +115,8 @@ impl<P: Peer> Connection<P> {
     /// If an error was encountered while receiving a packet, returns Err(_) and discards the packet
     pub fn poll_receive<T>(&mut self) -> Result<Option<T>, Error>
     where
-        T: PacketSet + DeserializeOwned,
+        T: PacketSet + DeserializeOwned + 'static,
     {
-        let state: Box<dyn Any> = self.state;
-        let state = state
-            .downcast::<T::State>()
-            .map_err(|_| ErrorKind::WrongState {
-                expected: T::State::STATE,
-                actual: self.state(),
-            })?;
-
         let packet_length = match self.pending_receive_len.take() {
             Some(packet_length) => packet_length,
             None => {
@@ -152,12 +139,11 @@ impl<P: Peer> Connection<P> {
 
         let prev_total_bytes = self.receive_queue.total_bytes();
 
+        let state = self.state();
+
         // Use `.take()` to limit the bytes that can be read so in case the deserialization goes wrong it can't eat into the
         // data of subsequent packets
-        match deserialize_packet_from(
-            (&mut self.receive_queue).take(packet_length as u64),
-            T::State::STATE,
-        ) {
+        match deserialize_packet_from((&mut self.receive_queue).take(packet_length as u64), state) {
             Ok(packet) => {
                 assert_eq!(
                     prev_total_bytes - self.receive_queue.total_bytes(),
@@ -165,8 +151,8 @@ impl<P: Peer> Connection<P> {
                     "Deserializing packet didn't read all of its bytes"
                 );
 
-                state.handle_packet_deserialize(&packet);
-                if let Some(new_state) = state.poll_state_change() {
+                self.state.handle_packet_deserialize(&packet)?;
+                if let Some(new_state) = self.state.poll_state_change() {
                     self.queued_state_change = Some(new_state.state());
                     self.state = new_state
                 }
@@ -179,7 +165,7 @@ impl<P: Peer> Connection<P> {
                 let read_bytes = prev_total_bytes - self.receive_queue.total_bytes();
                 let leftover_bytes = packet_length - read_bytes;
                 self.receive_queue.discard_bytes(leftover_bytes);
-                Err(e.into())
+                Err(e)
             }
         }
     }
@@ -201,7 +187,11 @@ mod tests {
     fn client_ser() {
         let mut client: Connection<Client> = Connection::new();
 
-        client.handle_send(Profile { username: "asd" }).unwrap();
+        client
+            .handle_send(Profile {
+                username: "asd".into(),
+            })
+            .unwrap();
 
         // Intended compile fails
         // client.handle_send(Lobby {
@@ -231,7 +221,9 @@ mod tests {
             .unwrap();
 
         server
-            .handle_send(PlayerJoined { username: "asd" })
+            .handle_send(PlayerJoined {
+                username: "asd".into(),
+            })
             .unwrap();
 
         server.handle_send(PlayerLeft).unwrap();

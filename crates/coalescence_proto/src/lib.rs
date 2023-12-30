@@ -39,6 +39,12 @@ pub(crate) enum ErrorKind {
 		ConnectionState::COUNT - 1
 	)]
     InvalidState(u8),
+    #[error("The connection is in state {state}, which expects packets of type {expected}, but was given a packet of type {actual} instead")]
+    WrongPacket {
+        state: ConnectionState,
+        expected: &'static str,
+        actual: &'static str,
+    },
     #[error(transparent)]
     Serde(#[from] CodecError),
     #[error(transparent)]

@@ -7,19 +7,19 @@ use strum::EnumDiscriminants;
 use crate::{
     connection::Channel,
     peer::{Client, Server},
-    state::{ConnectionStateImpl, HandshakeState, LobbyState},
 };
 
 /// A type that can represent any of the packet types associated with a certain connection state
-pub(crate) trait PacketSet: Sized {
-    type State: ConnectionStateImpl<Self>;
-}
+pub trait PacketSet {}
 
 /// A packet type that is included in the packet set `T`
 ///
 /// The generic type parameter `P` is the [`Peer`] on which this packet type can be serialized and transmitted (i.e. is "outbound")
 pub trait Packet<T, P> {
+    /// The channel which this packet should be sent over
     const CHANNEL: Channel;
+
+    /// Convert this packet into its associated packet set
     fn into_set(self) -> T;
 }
 
@@ -27,64 +27,60 @@ pub trait Packet<T, P> {
 #[derive(Debug, Serialize, Deserialize, EnumDiscriminants)]
 #[strum_discriminants(derive(EnumSetType), enumset(no_super_impls))]
 #[strum_discriminants(name(HandshakePacketDiscriminant))]
-pub enum HandshakePacket<'a> {
-    #[serde(borrow)]
-    Profile(Profile<'a>),
-    Lobby(Lobby<'a>),
+pub enum HandshakePacket {
+    // #[serde(borrow)]
+    Profile(Profile),
+    Lobby(Lobby),
 }
 
-impl PacketSet for HandshakePacket<'_> {
-    type State = HandshakeState;
-}
+impl PacketSet for HandshakePacket {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Profile<'a> {
-    pub username: &'a str,
+pub struct Profile {
+    pub username: String,
 }
 
-impl<'a> Packet<HandshakePacket<'a>, Client> for Profile<'a> {
+impl Packet<HandshakePacket, Client> for Profile {
     const CHANNEL: Channel = Channel::Ordered;
 
-    fn into_set(self) -> HandshakePacket<'a> {
+    fn into_set(self) -> HandshakePacket {
         HandshakePacket::Profile(self)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Lobby<'a> {
-    #[serde(borrow)]
-    pub usernames: Vec<&'a str>,
+pub struct Lobby {
+    // #[serde(borrow)]
+    pub usernames: Vec<String>,
 }
 
-impl<'a> Packet<HandshakePacket<'a>, Server> for Lobby<'a> {
+impl Packet<HandshakePacket, Server> for Lobby {
     const CHANNEL: Channel = Channel::Ordered;
 
-    fn into_set(self) -> HandshakePacket<'a> {
+    fn into_set(self) -> HandshakePacket {
         HandshakePacket::Lobby(self)
     }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub enum LobbyPacket<'a> {
-    #[serde(borrow)]
-    PlayerJoined(PlayerJoined<'a>),
+pub enum LobbyPacket {
+    // #[serde(borrow)]
+    PlayerJoined(PlayerJoined),
     PlayerLeft(PlayerLeft),
     Disconnect,
 }
 
-impl PacketSet for LobbyPacket<'_> {
-    type State = LobbyState;
-}
+impl PacketSet for LobbyPacket {}
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PlayerJoined<'a> {
-    pub username: &'a str,
+pub struct PlayerJoined {
+    pub username: String,
 }
 
-impl<'a> Packet<LobbyPacket<'a>, Server> for PlayerJoined<'a> {
+impl Packet<LobbyPacket, Server> for PlayerJoined {
     const CHANNEL: Channel = Channel::Ordered;
 
-    fn into_set(self) -> LobbyPacket<'a> {
+    fn into_set(self) -> LobbyPacket {
         LobbyPacket::PlayerJoined(self)
     }
 }
@@ -92,10 +88,10 @@ impl<'a> Packet<LobbyPacket<'a>, Server> for PlayerJoined<'a> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlayerLeft;
 
-impl<'a> Packet<LobbyPacket<'a>, Server> for PlayerLeft {
+impl Packet<LobbyPacket, Server> for PlayerLeft {
     const CHANNEL: Channel = Channel::Ordered;
 
-    fn into_set(self) -> LobbyPacket<'a> {
+    fn into_set(self) -> LobbyPacket {
         LobbyPacket::PlayerLeft(self)
     }
 }

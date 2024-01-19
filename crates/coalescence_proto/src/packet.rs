@@ -5,9 +5,22 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use strum::EnumDiscriminants;
 
 use crate::{
-    connection::Channel,
     peer::{Client, Server},
+    state::{ConnectionStateImpl, HandshakeState, LobbyState},
 };
+
+mod receiver;
+mod sender;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Channel {
+    /// Packets are guranteed to arrive in the same order they are sent
+    Ordered,
+    /// Packets are guranteed to arrive, but possibly in a different order than they were sent
+    Unordered,
+    /// Packets may be lost, and may arrive in a different order than they were sent
+    Unreliable,
+}
 
 /// A type that can represent any of a number of different packet types, and is suitable for being serialized and deserialized
 pub trait PacketSet: Serialize + DeserializeOwned + 'static {}
@@ -18,6 +31,8 @@ pub trait PacketSet: Serialize + DeserializeOwned + 'static {}
 pub trait Packet<P> {
     /// The packet set that this packet is included in
     type Set: PacketSet;
+
+    type State: ConnectionStateImpl<Packet = Self::Set>;
 
     /// The channel which this packet should be sent over
     const CHANNEL: Channel;
@@ -45,6 +60,7 @@ pub struct Profile {
 
 impl Packet<Client> for Profile {
     type Set = HandshakePacket;
+    type State = HandshakeState;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> HandshakePacket {
@@ -60,6 +76,7 @@ pub struct Lobby {
 
 impl Packet<Server> for Lobby {
     type Set = HandshakePacket;
+    type State = HandshakeState;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> HandshakePacket {
@@ -84,6 +101,7 @@ pub struct PlayerJoined {
 
 impl Packet<Server> for PlayerJoined {
     type Set = LobbyPacket;
+    type State = LobbyState;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> LobbyPacket {
@@ -96,6 +114,7 @@ pub struct PlayerLeft;
 
 impl Packet<Server> for PlayerLeft {
     type Set = LobbyPacket;
+    type State = LobbyState;
     const CHANNEL: Channel = Channel::Ordered;
 
     fn into_set(self) -> LobbyPacket {

@@ -1,5 +1,6 @@
-use std::{any::Any, fmt::Debug};
+use std::fmt::Debug;
 
+use bevy::ecs::component::Component;
 use enumset::EnumSet;
 use strum::{Display, EnumCount};
 
@@ -36,42 +37,8 @@ impl TryFrom<u8> for ConnectionState {
     }
 }
 
-/// A trait object for downcasting, similar to `Any`, but that allows getting the underlying concrete type's type name, instead
-/// of just the type ID
-pub(crate) trait NamedAny {
-    /// Manually converts to a `&dyn Any` trait object, which is necessary because trait object upcasting is unstable
-    fn upcast(&self) -> &dyn Any;
-
-    /// Manually converts to a `&mut dyn Any` trait object, which is necessary because trait object upcasting is unstable
-    fn upcast_mut(&mut self) -> &mut dyn Any;
-
-    /// The `std::any::type_name()` of the underlying concrete type
-    fn type_name(&self) -> &'static str;
-}
-
-impl<T: Any> NamedAny for T {
-    fn upcast(&self) -> &dyn Any {
-        self
-    }
-
-    fn upcast_mut(&mut self) -> &mut dyn Any {
-        self
-    }
-
-    fn type_name(&self) -> &'static str {
-        std::any::type_name::<T>()
-    }
-}
-
-impl dyn NamedAny + '_ {
-    /// Returns some reference to the inner value if it is of type `T`, or `None` if it isn't.
-    fn downcast_ref<T: Any>(&self) -> Option<&T> {
-        self.upcast().downcast_ref()
-    }
-}
-
 /// A trait for the internal logic of a specified connection state, including transitions to other states
-pub(crate) trait ConnectionStateImpl: Debug {
+pub(crate) trait ConnectionStateImpl {
     /// The packet type that is handled by this state
     type Packet;
 
@@ -88,67 +55,8 @@ pub(crate) trait ConnectionStateImpl: Debug {
     fn poll_state_change(&self) -> Option<impl ConnectionStateImpl + 'static>;
 }
 
-/// An object-safe trait for storing [`ConnectionStateImpl`]s as trait objects
-pub(crate) trait ConnectionStateObject: Debug {
-    /// The corresponding state enum value that this impl represents
-    fn state(&self) -> ConnectionState;
-
-    /// Handle a packet being serialized and transmitted
-    fn handle_packet_serialize(&mut self, packet: &dyn NamedAny) -> Result<(), Error>;
-
-    /// Handle a packet being received and deserialized
-    fn handle_packet_deserialize(&mut self, packet: &dyn NamedAny) -> Result<(), Error>;
-
-    /// Check if the connection should transition into a new state
-    fn poll_state_change(&self) -> Option<Box<dyn ConnectionStateObject>>;
-}
-
-/// Impl to allow storing and using `ConnectionStateImpl`s as `ConnectionStateObject` trait objects
-impl<T> ConnectionStateObject for T
-where
-    T: ConnectionStateImpl + Debug,
-    T::Packet: 'static,
-{
-    fn state(&self) -> ConnectionState {
-        T::STATE
-    }
-
-    fn handle_packet_serialize(&mut self, packet: &dyn NamedAny) -> Result<(), Error> {
-        packet
-            .downcast_ref::<T::Packet>()
-            .ok_or_else(|| {
-                ErrorKind::WrongPacket {
-                    state: T::STATE,
-                    expected: std::any::type_name::<T::Packet>(),
-                    actual: packet.type_name(),
-                }
-                .into()
-            })
-            .and_then(|packet| self.handle_packet_serialize(packet))
-    }
-
-    fn handle_packet_deserialize(&mut self, packet: &dyn NamedAny) -> Result<(), Error> {
-        packet
-            .downcast_ref::<T::Packet>()
-            .ok_or_else(|| {
-                ErrorKind::WrongPacket {
-                    state: T::STATE,
-                    expected: std::any::type_name::<T::Packet>(),
-                    actual: packet.type_name(),
-                }
-                .into()
-            })
-            .and_then(|packet| self.handle_packet_deserialize(packet))
-    }
-
-    fn poll_state_change(&self) -> Option<Box<dyn ConnectionStateObject>> {
-        self.poll_state_change()
-            .map(|state| -> Box<dyn ConnectionStateObject> { Box::new(state) })
-    }
-}
-
 /// In order to complete the handshake, every handshake packet type must be handled at least once
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Component)]
 pub struct HandshakeState {
     handled: EnumSet<HandshakePacketDiscriminant>,
 }
@@ -172,7 +80,7 @@ impl ConnectionStateImpl for HandshakeState {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Component)]
 pub struct LobbyState;
 
 impl ConnectionStateImpl for LobbyState {
@@ -192,6 +100,6 @@ impl ConnectionStateImpl for LobbyState {
     }
 }
 
-pub(crate) fn default_state() -> Box<dyn ConnectionStateObject> {
-    Box::<HandshakeState>::default()
+pub(crate) fn default_state() -> impl ConnectionStateImpl {
+    HandshakeState::default()
 }

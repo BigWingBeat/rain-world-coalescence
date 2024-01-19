@@ -1,10 +1,9 @@
-mod connection;
 mod packet;
 mod peer;
+mod plugin;
 mod serde;
 mod state;
 
-pub use connection::Connection;
 pub use peer::Peer;
 
 use serde::CodecError;
@@ -15,6 +14,12 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[error(transparent)]
 pub struct Error(ErrorKind);
+
+impl Error {
+    pub(crate) fn kind(&self) -> &ErrorKind {
+        &self.0
+    }
+}
 
 impl<T> From<T> for Error
 where

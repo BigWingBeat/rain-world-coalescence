@@ -1,8 +1,12 @@
 use std::io::Read;
 
 use bevy::{
-    ecs::{component::Component, system::Query},
-    log::error,
+    ecs::{
+        component::Component,
+        entity::Entity,
+        event::{Event, EventWriter},
+        system::Query,
+    },
     prelude::{Deref, DerefMut},
 };
 use bytes::Bytes;
@@ -10,7 +14,7 @@ use serde::de::DeserializeOwned;
 
 use crate::{
     serde::{deserialize_packet_from, ByteQueue, Header, MalformedHeader},
-    state::ConnectionStateImpl,
+    state::{ConnectionState, ConnectionStateImpl},
     Error,
 };
 
@@ -18,6 +22,14 @@ use crate::{
 #[derive(Debug, Component, Deref, DerefMut)]
 pub struct Received<T> {
     pub buffer: Vec<T>,
+}
+
+/// An event that is sent whenever an error is encountered while receiving a packet
+#[derive(Debug, Event)]
+pub struct ReceiveError {
+    pub entity: Entity,
+    pub error: Error,
+    pub state: ConnectionState,
 }
 
 impl<T> Default for Received<T> {
@@ -126,20 +138,30 @@ impl PacketReceiver {
 }
 
 pub(crate) fn packet_deserialize<S>(
-    mut query: Query<(&mut PacketReceiver, &mut Received<S::Packet>, &mut S)>,
+    mut query: Query<(
+        Entity,
+        &mut PacketReceiver,
+        &mut Received<S::Packet>,
+        &mut S,
+    )>,
+    mut errors: EventWriter<ReceiveError>,
 ) where
     S: ConnectionStateImpl + Send + Sync + 'static,
     S::Packet: DeserializeOwned + Send + Sync + 'static,
 {
-    for (mut receiver, mut received_buf, mut state) in query.iter_mut() {
-        if let Err(e) = match receiver.poll_receive::<S>() {
+    for (entity, mut receiver, mut received_buf, mut state) in query.iter_mut() {
+        if let Err(error) = match receiver.poll_receive::<S>() {
             Ok(Some(packet)) => state.handle_packet_deserialize(&packet).map(|_| {
                 received_buf.push(packet);
             }),
             Ok(None) => Ok(()),
             Err(e) => Err(e),
         } {
-            error!("Error while receiving packet for state {}: {e}", S::STATE)
+            errors.send(ReceiveError {
+                entity,
+                error,
+                state: S::STATE,
+            });
         }
     }
 }

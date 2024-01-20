@@ -75,7 +75,7 @@ impl ConnectionStateImpl for HandshakeState {
         Ok(())
     }
 
-    fn poll_state_change(&self) -> Option<impl ConnectionStateImpl + 'static> {
+    fn poll_state_change(&self) -> Option<impl ConnectionStateImpl> {
         (self.handled == EnumSet::ALL).then_some(LobbyState)
     }
 }
@@ -95,7 +95,7 @@ impl ConnectionStateImpl for LobbyState {
         Ok(())
     }
 
-    fn poll_state_change(&self) -> Option<impl ConnectionStateImpl + 'static> {
+    fn poll_state_change(&self) -> Option<impl ConnectionStateImpl> {
         None::<LobbyState>
     }
 }

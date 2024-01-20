@@ -4,7 +4,7 @@ pub enum Client {}
 #[derive(Debug)]
 pub enum Server {}
 
-pub trait Peer: sealed::Sealed {}
+pub trait Peer: sealed::Sealed + Send + Sync + 'static {}
 
 impl Peer for Client {}
 impl Peer for Server {}

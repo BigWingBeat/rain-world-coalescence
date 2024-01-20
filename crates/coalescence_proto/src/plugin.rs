@@ -13,15 +13,16 @@ use crate::{
         packet_deserialize, HandshakePacket, LobbyPacket, PacketReceiver, PacketSender, Received,
     },
     state::{default_state, HandshakeState, LobbyState},
+    Peer,
 };
 
 pub trait EntityCommandsExt {
-    fn insert_connection<P: Send + Sync + 'static>(&mut self) -> &mut Self;
-    fn try_insert_connection<P: Send + Sync + 'static>(&mut self) -> &mut Self;
+    fn insert_connection<P: Peer>(&mut self) -> &mut Self;
+    fn try_insert_connection<P: Peer>(&mut self) -> &mut Self;
 }
 
 impl EntityCommandsExt for EntityCommands<'_, '_, '_> {
-    fn insert_connection<P: Send + Sync + 'static>(&mut self) -> &mut Self {
+    fn insert_connection<P: Peer>(&mut self) -> &mut Self {
         self.insert((
             PacketSender::<P>::default(),
             PacketReceiver::default(),
@@ -31,7 +32,7 @@ impl EntityCommandsExt for EntityCommands<'_, '_, '_> {
         ))
     }
 
-    fn try_insert_connection<P: Send + Sync + 'static>(&mut self) -> &mut Self {
+    fn try_insert_connection<P: Peer>(&mut self) -> &mut Self {
         self.try_insert((
             PacketSender::<P>::default(),
             PacketReceiver::default(),
@@ -51,7 +52,7 @@ pub struct ReceivePackets;
 #[derive(Debug)]
 pub struct ProtoPlugin<P>(PhantomData<P>);
 
-impl<P: Send + Sync + 'static> Plugin for ProtoPlugin<P> {
+impl<P: Peer> Plugin for ProtoPlugin<P> {
     fn build(&self, app: &mut App) {
         app.add_systems(
             Update,

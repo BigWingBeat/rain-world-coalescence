@@ -128,7 +128,7 @@ impl PacketReceiver {
 pub(crate) fn packet_deserialize<S>(
     mut query: Query<(&mut PacketReceiver, &mut Received<S::Packet>, &mut S)>,
 ) where
-    S: ConnectionStateImpl + Component + Send + Sync + 'static,
+    S: ConnectionStateImpl + Send + Sync + 'static,
     S::Packet: DeserializeOwned + Send + Sync + 'static,
 {
     for (mut receiver, mut received_buf, mut state) in query.iter_mut() {

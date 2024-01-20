@@ -1,8 +1,8 @@
 #[derive(Debug)]
-pub struct Client;
+pub enum Client {}
 
 #[derive(Debug)]
-pub struct Server;
+pub enum Server {}
 
 pub trait Peer: sealed::Sealed {}
 

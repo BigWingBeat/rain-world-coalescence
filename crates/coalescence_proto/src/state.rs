@@ -55,6 +55,8 @@ pub(crate) trait ConnectionStateImpl: Component {
     fn poll_state_change(&self) -> Option<impl ConnectionStateImpl + 'static>;
 }
 
+pub(crate) type DefaultState = HandshakeState;
+
 /// In order to complete the handshake, every handshake packet type must be handled at least once
 #[derive(Debug, Default, Component)]
 pub struct HandshakeState {
@@ -98,8 +100,4 @@ impl ConnectionStateImpl for LobbyState {
     fn poll_state_change(&self) -> Option<impl ConnectionStateImpl> {
         None::<LobbyState>
     }
-}
-
-pub(crate) fn default_state() -> impl ConnectionStateImpl {
-    HandshakeState::default()
 }

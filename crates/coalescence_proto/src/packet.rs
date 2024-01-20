@@ -1,5 +1,6 @@
 //! The different types of packets that correspond to each of the different [`state`]s that the connection can be in
 
+use bevy::ecs::bundle::Bundle;
 use enumset::EnumSetType;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use strum::EnumDiscriminants;
@@ -43,6 +44,12 @@ pub trait Packet<P> {
 
     /// Convert this packet into its associated packet set
     fn into_set(self) -> Self::Set;
+}
+
+#[derive(Debug, Bundle, Default)]
+pub struct ReceivedPackets {
+    handshake: Received<HandshakePacket>,
+    lobby: Received<LobbyPacket>,
 }
 
 /// The packets that needs to be exchanged between the client and server while establishing the connection

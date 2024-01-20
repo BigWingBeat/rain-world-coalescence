@@ -3,44 +3,23 @@ use std::marker::PhantomData;
 use bevy::{
     app::{App, Plugin, Update},
     ecs::{
+        bundle::Bundle,
         schedule::{IntoSystemConfigs, SystemSet},
-        system::EntityCommands,
     },
 };
 
 use crate::{
-    packet::{
-        packet_deserialize, HandshakePacket, LobbyPacket, PacketReceiver, PacketSender, Received,
-    },
-    state::{default_state, HandshakeState, LobbyState},
+    packet::{packet_deserialize, PacketReceiver, PacketSender, ReceivedPackets},
+    state::{DefaultState, HandshakeState, LobbyState},
     Peer,
 };
 
-pub trait EntityCommandsExt {
-    fn insert_connection<P: Peer>(&mut self) -> &mut Self;
-    fn try_insert_connection<P: Peer>(&mut self) -> &mut Self;
-}
-
-impl EntityCommandsExt for EntityCommands<'_, '_, '_> {
-    fn insert_connection<P: Peer>(&mut self) -> &mut Self {
-        self.insert((
-            PacketSender::<P>::default(),
-            PacketReceiver::default(),
-            Received::<HandshakePacket>::default(),
-            Received::<LobbyPacket>::default(),
-            default_state(),
-        ))
-    }
-
-    fn try_insert_connection<P: Peer>(&mut self) -> &mut Self {
-        self.try_insert((
-            PacketSender::<P>::default(),
-            PacketReceiver::default(),
-            Received::<HandshakePacket>::default(),
-            Received::<LobbyPacket>::default(),
-            default_state(),
-        ))
-    }
+#[derive(Debug, Bundle, Default)]
+pub struct ConnectionBundle<P: Peer> {
+    sender: PacketSender<P>,
+    receiver: PacketReceiver,
+    received_packets: ReceivedPackets,
+    state: DefaultState,
 }
 
 #[derive(Debug, SystemSet, Hash, PartialEq, Eq, Clone, Copy)]

@@ -12,6 +12,10 @@ use crate::{
 mod receiver;
 mod sender;
 
+pub(crate) use receiver::packet_deserialize;
+pub use receiver::{PacketReceiver, Received};
+pub use sender::PacketSender;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Channel {
     /// Packets are guranteed to arrive in the same order they are sent

@@ -20,6 +20,14 @@ pub struct Received<T> {
     pub buffer: Vec<T>,
 }
 
+impl<T> Default for Received<T> {
+    fn default() -> Self {
+        Self {
+            buffer: Default::default(),
+        }
+    }
+}
+
 /// A component that receives and deserializes packets from a peer
 #[derive(Debug, Component, Default)]
 pub struct PacketReceiver {
@@ -117,8 +125,9 @@ impl PacketReceiver {
     }
 }
 
-fn packet_deserialize<S>(mut query: Query<(&mut PacketReceiver, &mut Received<S::Packet>, &mut S)>)
-where
+pub(crate) fn packet_deserialize<S>(
+    mut query: Query<(&mut PacketReceiver, &mut Received<S::Packet>, &mut S)>,
+) where
     S: ConnectionStateImpl + Component + Send + Sync + 'static,
     S::Packet: DeserializeOwned + Send + Sync + 'static,
 {

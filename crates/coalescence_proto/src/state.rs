@@ -38,7 +38,7 @@ impl TryFrom<u8> for ConnectionState {
 }
 
 /// A trait for the internal logic of a specified connection state, including transitions to other states
-pub(crate) trait ConnectionStateImpl {
+pub(crate) trait ConnectionStateImpl: Component {
     /// The packet type that is handled by this state
     type Packet;
 

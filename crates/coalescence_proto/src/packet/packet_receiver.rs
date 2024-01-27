@@ -119,12 +119,17 @@ pub(crate) fn receive(
 ) {
     for (entity, mut receiver, mut buffers) in query.iter_mut() {
         // Deserialize the buffered unordered and unreliable packets together, as they're handled identically here
-        for packets in receiver
-            .unordered_buffer
-            .iter()
-            .chain(receiver.unreliable_buffer.iter())
+        let PacketReceiver {
+            unordered_buffer,
+            unreliable_buffer,
+            ..
+        } = &mut *receiver;
+
+        for packets in unordered_buffer
+            .drain(..)
+            .chain(unreliable_buffer.drain(..))
         {
-            match deserialize(packets) {
+            match deserialize(&packets) {
                 Ok(packet) => buffers.receive(packet),
                 Err(error) => {
                     errors.send(ReceiveError { entity, error });

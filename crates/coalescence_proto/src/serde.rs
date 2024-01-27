@@ -5,7 +5,7 @@
 //! exactly how many bytes are needed to decode it. The codec would prevent us from knowing that, as it is a black box that
 //! could encode integers in any way, including with a variable-length encoding such as zig-zag, elias gamma, etc.
 //!
-//! A u16 is used for the length prefix, because it's the smallest integer type that is guranteed to be able to store the length
+//! A u16 is used for the length prefix, because it's the smallest integer type that is guaranteed to be able to store the length
 //! of a packet without overflowing. The maximum allowed packet size varies per network path, but is [standardized] to always be
 //! between 1,200 and 65,527 bytes, and the maximum value for a u16 is 65,535 bytes.
 //!

@@ -12,7 +12,7 @@ use widestring::{U16CStr, U16CString, Utf16Str};
 
 use crate::app::{configure_logging, AppContainer};
 
-/// A `Box`, but only for `Sized` types, so guranteed to always be 'thin', i.e. always 1 `usize`.
+/// A `Box`, but only for `Sized` types, so guaranteed to always be 'thin', i.e. always 1 `usize`.
 /// Pointers to unsized types are 'fat', i.e. 2 `usize`s. The second `usize` is for len/vtable/etc.
 /// This is needed because pointers get marshalled to C#'s `IntPtr` type, which is always 1 `usize`.
 /// See https://doc.rust-lang.org/std/boxed/index.html#memory-layout

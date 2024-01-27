@@ -1,4 +1,4 @@
-//! The different types of packets that correspond to each of the different [`state`]s that the connection can be in
+//! The different types of packets that are defined by the protocol
 #![allow(non_snake_case)]
 
 use bevy::{

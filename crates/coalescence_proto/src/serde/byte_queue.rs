@@ -92,7 +92,7 @@ impl ByteQueue {
         let mut iter = self.queue.iter();
 
         while amount > 0 {
-            // SAFETY: `amount.min(self.len())` above gurantees that the while loop will terminate before we run out of bytes
+            // SAFETY: `amount.min(self.len())` above guarantees that the while loop will terminate before we run out of bytes
             let next = unsafe { iter.next().unwrap_unchecked() };
             if next.len() > amount {
                 // SAFETY: The range ..amount is always in bounds because we checked that it is less than the slice len above

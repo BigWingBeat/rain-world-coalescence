@@ -1,6 +1,6 @@
 use std::io::Write;
 
-/// A header that prefixes all packets that are sent over the reliable-ordered channel, for framing
+/// A header that prefixes all packets that are sent over the ordered-reliable channel, for framing
 #[derive(Debug)]
 pub struct OrderedHeader {
     /// The length of the serialized packet data

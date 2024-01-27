@@ -9,17 +9,15 @@ use bevy::{
 };
 
 use crate::{
-    packet::{packet_deserialize, PacketReceiver, PacketSender, ReceivedPackets},
-    state::{DefaultState, HandshakeState, LobbyState},
-    Peer,
+    packet::{receive, PacketReceiver, PacketSender},
+    peer::Peer,
 };
 
 #[derive(Debug, Bundle, Default)]
 pub struct ConnectionBundle<P: Peer> {
     sender: PacketSender<P>,
     receiver: PacketReceiver,
-    received_packets: ReceivedPackets,
-    state: DefaultState,
+    // received_packets: ReceivedPackets,
 }
 
 #[derive(Debug, SystemSet, Hash, PartialEq, Eq, Clone, Copy)]
@@ -33,13 +31,6 @@ pub struct ProtoPlugin<P>(PhantomData<P>);
 
 impl<P: Peer> Plugin for ProtoPlugin<P> {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            Update,
-            (
-                packet_deserialize::<HandshakeState>,
-                packet_deserialize::<LobbyState>,
-            )
-                .in_set(ReceivePackets),
-        );
+        app.add_systems(Update, receive.in_set(ReceivePackets));
     }
 }

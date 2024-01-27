@@ -6,7 +6,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use super::SerdeCodec;
 
 #[derive(Debug)]
-pub struct Bincode;
+pub(super) enum Bincode {}
 
 impl Bincode {
     /// https://docs.rs/bincode/latest/bincode/config/index.html#options-struct-vs-bincode-functions

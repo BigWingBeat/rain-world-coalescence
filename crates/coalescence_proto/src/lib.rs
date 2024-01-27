@@ -1,14 +1,16 @@
-mod packet;
-mod peer;
+pub mod channel;
+mod is;
+pub mod packet;
+pub mod peer;
 mod plugin;
-mod serde;
-mod state;
+pub mod serde;
 
-pub use peer::Peer;
+pub use is::Is;
+pub use packet::{PacketReceiver, PacketSender, ReceiveError};
+pub use plugin::{ConnectionBundle, ProtoPlugin, ReceivePackets, SendPackets};
+pub use serde::ByteQueue;
 
-use serde::CodecError;
-use state::ConnectionState;
-use strum::EnumCount;
+use serde::SerdeError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -32,26 +34,8 @@ where
 
 #[derive(Debug, Error)]
 pub(crate) enum ErrorKind {
-    #[error(
-        "Expected the connection to be in state {expected}, but it was in state {actual} instead"
-    )]
-    WrongState {
-        expected: ConnectionState,
-        actual: ConnectionState,
-    },
-    #[error(
-		"{0} is not a valid connection state. Valid connection states range from 0 to {}",
-		ConnectionState::COUNT - 1
-	)]
-    InvalidState(u8),
-    #[error("The connection is in state {state}, which expects packets of type {expected}, but was given a packet of type {actual} instead")]
-    WrongPacket {
-        state: ConnectionState,
-        expected: &'static str,
-        actual: &'static str,
-    },
     #[error(transparent)]
-    Serde(#[from] CodecError),
+    Serde(#[from] SerdeError),
     #[error(transparent)]
     Io(#[from] std::io::Error),
 }
